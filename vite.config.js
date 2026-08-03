@@ -6,7 +6,13 @@ export default defineConfig({
   plugins: [react()],
   build: {
     outDir: 'dist',
-    chunkSizeWarningLimit: 1600, // Eleva el límite para evitar avisos por archivos grandes
-    sourcemap: false,           // Desactiva sourcemaps para acelerar la compilación en Vercel
+    // Desactiva la minificación agresiva temporalmente para obtener mensajes de error detallados
+    minify: true,
+    // Asegura compatibilidad con entornos Linux en Vercel
+    target: 'esnext',
+  },
+  // Forzar la resolución limpia de extensiones .jsx y .js
+  resolve: {
+    extensions: ['.mjs', '.js', '.ts', '.jsx', '.tsx', '.json'],
   },
 });
