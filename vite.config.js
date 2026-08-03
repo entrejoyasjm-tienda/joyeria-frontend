@@ -1,28 +1,28 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 
-// Configuración optimizada para garantizar la compilación estable en Vercel
+// Configuración de Vite optimizada para evitar fallos de compilación en Vercel
 export default defineConfig({
   plugins: [react()],
   build: {
     outDir: 'dist',
-    // Desactiva sourcemaps para reducir drásticamente el uso de memoria RAM en la nube
+    // Desactiva los sourcemaps para ahorrar memoria
     sourcemap: false,
-    // Incrementa el límite para evitar avisos que bloqueen el proceso
-    chunkSizeWarningLimit: 2000,
+    // Define esbuild como minificador estable
+    minify: 'esbuild',
+    // Desactiva advertencias de tamaño excesivo que interrumpen el build
+    chunkSizeWarningLimit: 3000,
     rollupOptions: {
-      // Fuerza el uso de la estrategia de empaquetado estándar y divide librerías grandes
+      onwarn(warning, warn) {
+        // Ignora advertencias no críticas durante el build en Vercel
+        if (warning.code === 'UNUSED_EXTERNAL_IMPORT') return;
+        warn(warning);
+      },
       output: {
-        manualChunks(id) {
-          if (id.includes('node_modules')) {
-            if (id.includes('@chakra-ui') || id.includes('@emotion') || id.includes('framer-motion')) {
-              return 'vendor-ui';
-            }
-            if (id.includes('react') || id.includes('react-dom') || id.includes('react-router-dom')) {
-              return 'vendor-react';
-            }
-            return 'vendor';
-          }
+        // Divide el código en paquetes pequeños
+        manualChunks: {
+          'vendor-react': ['react', 'react-dom', 'react-router-dom'],
+          'vendor-ui': ['@chakra-ui/react', '@emotion/react', '@emotion/styled', 'framer-motion'],
         },
       },
     },
