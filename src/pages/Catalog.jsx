@@ -40,7 +40,7 @@ function Catalog() {
       setLoading(true); // Activamos el spinner al cambiar de filtro
       try {
         // 3. Enviamos los parámetros limpios al Backend mediante Axios
-        const response = await API.get('/api/products', {
+        const response = await API.get('/products', {
           params: {
             search: search,
             category: category
