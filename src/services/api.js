@@ -2,7 +2,8 @@ import axios from "axios";
 
 const API = axios.create({
     baseURL: import.meta.env.VITE_API_URL || 'https://joyeria-backend-smkb.onrender.com/api',
-headers: {
+    timeout: 60000,
+    headers: {
     'Content-Type': 'application/json',
   },
 });
