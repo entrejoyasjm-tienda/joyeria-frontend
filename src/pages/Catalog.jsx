@@ -1,4 +1,4 @@
-import { Link, useLocation } from 'react-router-dom';
+import { useLocation, useNavigate, Link } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import { IconButton } from '@chakra-ui/react'; 
 import { FiSettings } from 'react-icons/fi'; 
@@ -22,18 +22,18 @@ import API from '../services/api';
 // 📸 Importación del logo transparente de la tienda
 import logoImg from '../assets/logo.png'; 
 
-// 🌟 Arreglo con la tarjeta "Ver Todo" + las 9 categorías reales de la joyería
+// 🌟 Estructura que combina las categorías del Navbar con las rutas de imagen correspondientes
 const CATEGORIES = [
   { id: 'todos', name: 'Ver Todo', image: '/images/todas.jpg', query: '' },
-  { id: 'pulseras', name: 'Pulseras', image: '/images/pulseras.jpg', query: 'pulseras' },
-  { id: 'aros', name: 'Aros', image: '/images/aros.jpg', query: 'aros' },
-  { id: 'abridores', name: 'Abridores', image: '/images/abridores.jpg', query: 'abridores' },
-  { id: 'anillos', name: 'Anillos', image: '/images/anillos.jpg', query: 'anillos' },
-  { id: 'cadenas', name: 'Cadenas', image: '/images/cadenas.jpg', query: 'cadenas' },
-  { id: 'dijes', name: 'Dijes', image: '/images/dijes.jpg', query: 'dijes' },
-  { id: 'conjuntos', name: 'Conjuntos', image: '/images/conjuntos.jpg', query: 'conjuntos' },
-  { id: 'grabados', name: 'Grabados', image: '/images/grabados.jpg', query: 'grabados' },
-  { id: 'otros', name: 'Otros', image: '/images/otros.jpg', query: 'otros' },
+  { id: 'anillos', name: 'Anillos', image: '/images/anillos.jpg', query: 'Anillos' },
+  { id: 'cadenas', name: 'Cadenas', image: '/images/cadenas.jpg', query: 'Cadenas' },
+  { id: 'pulseras', name: 'Pulseras', image: '/images/pulseras.jpg', query: 'Pulseras' },
+  { id: 'aros', name: 'Aros', image: '/images/aros.jpg', query: 'Aros' },
+  { id: 'conjuntos', name: 'Conjuntos', image: '/images/conjuntos.jpg', query: 'Conjuntos' },
+  { id: 'abridores', name: 'Abridores', image: '/images/abridores.jpg', query: 'Abridores' },
+  { id: 'dijes', name: 'Dijes', image: '/images/dijes.jpg', query: 'Dijes' },
+  { id: 'grabados', name: 'Grabados', image: '/images/grabados.jpg', query: 'Grabados' },
+  { id: 'otros', name: 'Otros', image: '/images/otros.jpg', query: 'Otros' },
 ];
 
 function Catalog() {
@@ -41,19 +41,18 @@ function Catalog() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // 1. Hook para escuchar la barra de direcciones del navegador
   const location = useLocation();
+  const navigate = useNavigate();
 
+  // Escuchar parámetros de la URL para actualizar la lista de productos
   useEffect(() => {
-    // 2. Extraer parámetros de búsqueda (?search=... o ?category=...)
     const queryParams = new URLSearchParams(location.search);
     const search = queryParams.get('search') || '';
     const category = queryParams.get('category') || '';
 
     const fetchProducts = async () => {
-      setLoading(true); // Activamos el spinner al cambiar de filtro
+      setLoading(true);
       try {
-        // 3. Enviamos los parámetros limpios al Backend mediante Axios
         const response = await API.get('/products', {
           params: {
             search: search,
@@ -62,7 +61,7 @@ function Catalog() {
         }); 
         
         setProducts(response.data);
-        setError(null); // Limpiamos errores previos si la petición fue exitosa
+        setError(null);
       } catch (err) {
         console.error("Error al traer productos:", err);
         setError("No se pudo conectar con el servidor. ¿Está encendido el Backend?");
@@ -72,14 +71,21 @@ function Catalog() {
     };
 
     fetchProducts();
-    
-    // 4. Se vuelve a ejecutar cada vez que cambia la query string de la URL
   }, [location.search]);
 
-  // Título dinámico basado en el filtro activo
+  // Obtener estado activo de filtros
   const queryParams = new URLSearchParams(location.search);
   const categoriaActiva = queryParams.get('category');
   const busquedaActiva = queryParams.get('search');
+
+  // Navegar manteniendo la misma lógica que en Navbar.jsx
+  const handleCategorySelect = (categoriaQuery) => {
+    if (!categoriaQuery) {
+      navigate('/');
+    } else {
+      navigate(`/?category=${encodeURIComponent(categoriaQuery)}`);
+    }
+  };
 
   if (loading) {
     return (
@@ -106,8 +112,6 @@ function Catalog() {
       {/* 🌟 CABECERA CON LOGO DESTACADO Y TÍTULOS */}
       <Box textAlign="center" mb={8} bg="gray.50" py={8} borderRadius="xl" boxShadow="md">
         <VStack spacing={4} align="center">
-          
-          {/* Logo circular destacado */}
           <Image 
             src={logoImg} 
             alt="Entre Joyas J.M Logo" 
@@ -129,7 +133,6 @@ function Catalog() {
               {busquedaActiva ? "Revisa las piezas que coinciden con tu criterio." : "Descubre piezas únicas diseñadas con pasión."}
             </Text>
           </Box>
-
         </VStack>
       </Box>
 
@@ -141,7 +144,7 @@ function Catalog() {
 
         <SimpleGrid columns={{ base: 2, sm: 3, md: 5 }} spacing={4}>
           {CATEGORIES.map((cat) => {
-            // Verificar si esta tarjeta es la activa según la URL
+            // Evaluar si la tarjeta actual coincide con la URL
             const isSelected = 
               (cat.query === '' && !categoriaActiva) || 
               (categoriaActiva?.toLowerCase() === cat.query.toLowerCase());
@@ -149,8 +152,8 @@ function Catalog() {
             return (
               <Box
                 key={cat.id}
-                as={Link}
-                to={cat.query ? `/?category=${cat.query}` : '/'}
+                onClick={() => handleCategorySelect(cat.query)}
+                cursor="pointer"
                 borderRadius="xl"
                 overflow="hidden"
                 bg="white"
@@ -195,7 +198,7 @@ function Catalog() {
             No se encontraron joyas disponibles para tu criterio de búsqueda.
           </Text>
           {(categoriaActiva || busquedaActiva) && (
-            <Button as={Link} to="/" colorScheme="teal" variant="outline" size="sm">
+            <Button onClick={() => handleCategorySelect('')} colorScheme="teal" variant="outline" size="sm">
               Ver Todo el Catálogo
             </Button>
           )}
@@ -236,8 +239,7 @@ function Catalog() {
                 </Text>
 
                 <Button 
-                  as={Link}
-                  to={`/product/${product._id}`} 
+                  onClick={() => navigate(`/product/${product._id}`)} 
                   w="100%" 
                   bg="#D4AF37" 
                   color="white" 
@@ -254,8 +256,7 @@ function Catalog() {
 
       {/* 🛠️ BOTÓN FLOTANTE DE ADMINISTRACIÓN */}
       <IconButton
-        as={Link}
-        to={localStorage.getItem('adminToken') ? "/admin" : "/login"}
+        onClick={() => navigate(localStorage.getItem('adminToken') ? "/admin" : "/login")}
         icon={<FiSettings />}
         aria-label="Panel de Administración"
         position="fixed"
