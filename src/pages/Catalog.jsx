@@ -22,6 +22,20 @@ import API from '../services/api';
 // 📸 Importación del logo transparente de la tienda
 import logoImg from '../assets/logo.png'; 
 
+// 🌟 Arreglo con la tarjeta "Ver Todo" + las 9 categorías reales de la joyería
+const CATEGORIES = [
+  { id: 'todos', name: 'Ver Todo', image: '/images/todas.jpg', query: '' },
+  { id: 'pulseras', name: 'Pulseras', image: '/images/pulseras.jpg', query: 'pulseras' },
+  { id: 'aros', name: 'Aros', image: '/images/aros.jpg', query: 'aros' },
+  { id: 'abridores', name: 'Abridores', image: '/images/abridores.jpg', query: 'abridores' },
+  { id: 'anillos', name: 'Anillos', image: '/images/anillos.jpg', query: 'anillos' },
+  { id: 'cadenas', name: 'Cadenas', image: '/images/cadenas.jpg', query: 'cadenas' },
+  { id: 'dijes', name: 'Dijes', image: '/images/dijes.jpg', query: 'dijes' },
+  { id: 'conjuntos', name: 'Conjuntos', image: '/images/conjuntos.jpg', query: 'conjuntos' },
+  { id: 'grabados', name: 'Grabados', image: '/images/grabados.jpg', query: 'grabados' },
+  { id: 'otros', name: 'Otros', image: '/images/otros.jpg', query: 'otros' },
+];
+
 function Catalog() {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -62,6 +76,11 @@ function Catalog() {
     // 4. Se vuelve a ejecutar cada vez que cambia la query string de la URL
   }, [location.search]);
 
+  // Título dinámico basado en el filtro activo
+  const queryParams = new URLSearchParams(location.search);
+  const categoriaActiva = queryParams.get('category');
+  const busquedaActiva = queryParams.get('search');
+
   if (loading) {
     return (
       <Center h="100vh">
@@ -81,16 +100,11 @@ function Catalog() {
     );
   }
 
-  // Título dinámico basado en el filtro activo
-  const queryParams = new URLSearchParams(location.search);
-  const categoriaActiva = queryParams.get('category');
-  const busquedaActiva = queryParams.get('search');
-
   return (
     <Container maxW="container.xl" py={8}>
       
       {/* 🌟 CABECERA CON LOGO DESTACADO Y TÍTULOS */}
-      <Box textAlign="center" mb={10} bg="gray.50" py={8} borderRadius="xl" boxShadow="md">
+      <Box textAlign="center" mb={8} bg="gray.50" py={8} borderRadius="xl" boxShadow="md">
         <VStack spacing={4} align="center">
           
           {/* Logo circular destacado */}
@@ -100,12 +114,9 @@ function Catalog() {
             h={{ base: '110px', md: '140px' }}
             w={{ base: '110px', md: '140px' }}
             borderRadius="full"
-            //boxShadow="md"
-            //border="3px solid"
-            //borderColor="white"
             objectFit="cover"
             transition="all 0.3s ease-in-out"
-            _hover={{ transform: 'scale(1.05)', /*boxShadow: 'lg' */}}
+            _hover={{ transform: 'scale(1.05)' }}
           />
 
           <Box>
@@ -122,7 +133,62 @@ function Catalog() {
         </VStack>
       </Box>
 
-      {/* Grilla de Productos */}
+      {/* 💎 SECCIÓN DE TARJETAS DE CATEGORÍAS */}
+      <Box mb={10}>
+        <Heading size="md" mb={4} color="gray.700" textAlign="center">
+          Explora por Categoría
+        </Heading>
+
+        <SimpleGrid columns={{ base: 2, sm: 3, md: 5 }} spacing={4}>
+          {CATEGORIES.map((cat) => {
+            // Verificar si esta tarjeta es la activa según la URL
+            const isSelected = 
+              (cat.query === '' && !categoriaActiva) || 
+              (categoriaActiva?.toLowerCase() === cat.query.toLowerCase());
+
+            return (
+              <Box
+                key={cat.id}
+                as={Link}
+                to={cat.query ? `/?category=${cat.query}` : '/'}
+                borderRadius="xl"
+                overflow="hidden"
+                bg="white"
+                border="2px solid"
+                borderColor={isSelected ? '#D4AF37' : 'gray.200'}
+                boxShadow={isSelected ? 'md' : 'sm'}
+                transition="all 0.2s ease-in-out"
+                _hover={{
+                  transform: 'translateY(-4px)',
+                  boxShadow: 'md',
+                  borderColor: '#D4AF37'
+                }}
+                textAlign="center"
+              >
+                <Image 
+                  src={cat.image} 
+                  alt={cat.name}
+                  h="100px"
+                  w="100%"
+                  objectFit="cover"
+                  fallbackSrc="https://via.placeholder.com/150?text=Joya"
+                />
+                <Box p={2}>
+                  <Text 
+                    fontSize="sm" 
+                    fontWeight={isSelected ? 'bold' : 'medium'}
+                    color={isSelected ? '#D4AF37' : 'gray.700'}
+                  >
+                    {cat.name}
+                  </Text>
+                </Box>
+              </Box>
+            );
+          })}
+        </SimpleGrid>
+      </Box>
+
+      {/* 📦 GRILLA DE PRODUCTOS */}
       {products.length === 0 ? (
         <VStack spacing={4} py={10}>
           <Text textAlign="center" color="gray.500" fontSize="lg">
