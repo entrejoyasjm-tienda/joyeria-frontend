@@ -22,7 +22,7 @@ import API from '../services/api';
 // 📸 Importación del logo transparente de la tienda
 import logoImg from '../assets/logo.png'; 
 
-// 🌟 Estructura que combina las categorías del Navbar con las rutas de imagen correspondientes
+// 🌟 Categorías con imágenes para las tarjetas
 const CATEGORIES = [
   { id: 'todos', name: 'Ver Todo', image: '/images/todas.jpg', query: '' },
   { id: 'anillos', name: 'Anillos', image: '/images/anillos.jpg', query: 'Anillos' },
@@ -44,7 +44,7 @@ function Catalog() {
   const location = useLocation();
   const navigate = useNavigate();
 
-  // Escuchar parámetros de la URL para actualizar la lista de productos
+  // Escuchar cambios en la URL para solicitar productos al backend
   useEffect(() => {
     const queryParams = new URLSearchParams(location.search);
     const search = queryParams.get('search') || '';
@@ -73,12 +73,12 @@ function Catalog() {
     fetchProducts();
   }, [location.search]);
 
-  // Obtener estado activo de filtros
+  // Obtener estado activo de filtros desde los parámetros de la URL
   const queryParams = new URLSearchParams(location.search);
   const categoriaActiva = queryParams.get('category');
   const busquedaActiva = queryParams.get('search');
 
-  // Navegar manteniendo la misma lógica que en Navbar.jsx
+  // Navegación respetando los parámetros de la URL
   const handleCategorySelect = (categoriaQuery) => {
     if (!categoriaQuery) {
       navigate('/');
@@ -86,6 +86,16 @@ function Catalog() {
       navigate(`/?category=${encodeURIComponent(categoriaQuery)}`);
     }
   };
+
+  // 🌟 LÓGICA CONDICIONAL DE RENDERIZADO:
+  // Si NO hay categoría activa NI búsqueda activa (estamos en el inicio),
+  // mostramos solo los últimos 4 productos ingresados.
+  // Si SÍ hay un filtro activo, mostramos la totalidad de productos devueltos.
+  const hasFilter = Boolean(categoriaActiva || busquedaActiva);
+  
+  const displayedProducts = hasFilter 
+    ? products 
+    : [...products].slice(-4).reverse();
 
   if (loading) {
     return (
@@ -127,10 +137,14 @@ function Catalog() {
             <Heading as="h1" size="xl" color="gray.800" mb={2} letterSpacing="wide">
               {categoriaActiva ? `COLECCIÓN DE ${categoriaActiva.toUpperCase()}` : 
                busquedaActiva ? `RESULTADOS PARA: "${busquedaActiva}"` : 
-               "Entre Joyas J.M"}
+               "Últimas Incorporaciones"}
             </Heading>
             <Text color="gray.600" fontStyle="italic" fontSize={{ base: 'md', md: 'lg' }}>
-              {busquedaActiva ? "Revisa las piezas que coinciden con tu criterio." : "Descubre piezas únicas diseñadas con pasión."}
+              {busquedaActiva 
+                ? "Revisa las piezas que coinciden con tu criterio." 
+                : categoriaActiva 
+                ? "Explora todos los modelos de esta categoría." 
+                : "Nuestras piezas más recientes agregadas al catálogo."}
             </Text>
           </Box>
         </VStack>
@@ -144,7 +158,6 @@ function Catalog() {
 
         <SimpleGrid columns={{ base: 2, sm: 3, md: 5 }} spacing={4}>
           {CATEGORIES.map((cat) => {
-            // Evaluar si la tarjeta actual coincide con la URL
             const isSelected = 
               (cat.query === '' && !categoriaActiva) || 
               (categoriaActiva?.toLowerCase() === cat.query.toLowerCase());
@@ -192,7 +205,7 @@ function Catalog() {
       </Box>
 
       {/* 📦 GRILLA DE PRODUCTOS */}
-      {products.length === 0 ? (
+      {displayedProducts.length === 0 ? (
         <VStack spacing={4} py={10}>
           <Text textAlign="center" color="gray.500" fontSize="lg">
             No se encontraron joyas disponibles para tu criterio de búsqueda.
@@ -205,7 +218,7 @@ function Catalog() {
         </VStack>
       ) : (
         <SimpleGrid columns={{ base: 1, sm: 2, md: 3, lg: 4 }} spacing={8}>
-          {products.map((product) => (
+          {displayedProducts.map((product) => (
             <Box 
               key={product._id} 
               bg="white" 
