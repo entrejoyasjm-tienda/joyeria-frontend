@@ -22,9 +22,9 @@ import API from '../services/api';
 // 📸 Importación del logo transparente de la tienda
 import logoImg from '../assets/logo.png'; 
 
-// 🌟 Categorías con imágenes para las tarjetas
+// 🌟 Categorías con imágenes para las tarjetas (La primera opción representa "Ver Todo")
 const CATEGORIES = [
-  { id: 'todos', name: 'Ver Todo', image: '/images/todas.jpg', query: '' },
+  { id: 'todos', name: 'Ver Todo', image: '/images/todas.jpg', query: 'all' },
   { id: 'anillos', name: 'Anillos', image: '/images/anillos.jpg', query: 'Anillos' },
   { id: 'cadenas', name: 'Cadenas', image: '/images/cadenas.jpg', query: 'Cadenas' },
   { id: 'pulseras', name: 'Pulseras', image: '/images/pulseras.jpg', query: 'Pulseras' },
@@ -53,10 +53,13 @@ function Catalog() {
     const fetchProducts = async () => {
       setLoading(true);
       try {
+        // Si el usuario seleccionó 'all', traemos todos los productos sin filtro de categoría
+        const categoryParam = category === 'all' ? '' : category;
+
         const response = await API.get('/products', {
           params: {
             search: search,
-            category: category
+            category: categoryParam
           }
         }); 
         
@@ -87,13 +90,12 @@ function Catalog() {
     }
   };
 
-  // 🌟 LÓGICA CONDICIONAL DE RENDERIZADO:
-  // Si NO hay categoría activa NI búsqueda activa (estamos en el inicio),
-  // mostramos solo los últimos 4 productos ingresados.
-  // Si SÍ hay un filtro activo, mostramos la totalidad de productos devueltos.
-  const hasFilter = Boolean(categoriaActiva || busquedaActiva);
+  // 🌟 LÓGICA DE RENDERIZADO CONDICIONAL:
+  // Determina si debemos mostrar todos los productos o solo los últimos 4.
+  const verTodoActivo = categoriaActiva === 'all';
+  const showAllProducts = Boolean((categoriaActiva && !verTodoActivo) || busquedaActiva || verTodoActivo);
   
-  const displayedProducts = hasFilter 
+  const displayedProducts = showAllProducts 
     ? products 
     : [...products].slice(-4).reverse();
 
@@ -119,7 +121,7 @@ function Catalog() {
   return (
     <Container maxW="container.xl" py={8}>
       
-      {/* 🌟 CABECERA CON LOGO DESTACADO Y TÍTULOS */}
+      {/* 🌟 CABECERA CON LOGO Y TÍTULOS */}
       <Box textAlign="center" mb={8} bg="gray.50" py={8} borderRadius="xl" boxShadow="md">
         <VStack spacing={4} align="center">
           <Image 
@@ -135,22 +137,23 @@ function Catalog() {
 
           <Box>
             <Heading as="h1" size="xl" color="gray.800" mb={2} letterSpacing="wide">
-              {categoriaActiva ? `COLECCIÓN DE ${categoriaActiva.toUpperCase()}` : 
+              {verTodoActivo ? "CATÁLOGO COMPLETO" :
+               categoriaActiva ? `COLECCIÓN DE ${categoriaActiva.toUpperCase()}` : 
                busquedaActiva ? `RESULTADOS PARA: "${busquedaActiva}"` : 
                "Últimas Incorporaciones"}
             </Heading>
             <Text color="gray.600" fontStyle="italic" fontSize={{ base: 'md', md: 'lg' }}>
               {busquedaActiva 
                 ? "Revisa las piezas que coinciden con tu criterio." 
-                : categoriaActiva 
-                ? "Explora todos los modelos de esta categoría." 
+                : (categoriaActiva || verTodoActivo)
+                ? "Explora todos los modelos disponibles en nuestra tienda." 
                 : "Nuestras piezas más recientes agregadas al catálogo."}
             </Text>
           </Box>
         </VStack>
       </Box>
 
-      {/* 💎 SECCIÓN DE TARJETAS DE CATEGORÍAS */}
+      {/* 💎 1. SECCIÓN DE TARJETAS DE CATEGORÍAS (Incluye la tarjeta "Ver Todo") */}
       <Box mb={10}>
         <Heading size="md" mb={4} color="gray.700" textAlign="center">
           Explora por Categoría
@@ -159,7 +162,8 @@ function Catalog() {
         <SimpleGrid columns={{ base: 2, sm: 3, md: 5 }} spacing={4}>
           {CATEGORIES.map((cat) => {
             const isSelected = 
-              (cat.query === '' && !categoriaActiva) || 
+              (cat.query === 'all' && verTodoActivo) || 
+              (!categoriaActiva && cat.query === '') ||
               (categoriaActiva?.toLowerCase() === cat.query.toLowerCase());
 
             return (
@@ -210,61 +214,81 @@ function Catalog() {
           <Text textAlign="center" color="gray.500" fontSize="lg">
             No se encontraron joyas disponibles para tu criterio de búsqueda.
           </Text>
-          {(categoriaActiva || busquedaActiva) && (
-            <Button onClick={() => handleCategorySelect('')} colorScheme="teal" variant="outline" size="sm">
-              Ver Todo el Catálogo
-            </Button>
-          )}
+          <Button onClick={() => handleCategorySelect('all')} colorScheme="teal" variant="outline" size="sm">
+            Ver Todo el Catálogo
+          </Button>
         </VStack>
       ) : (
-        <SimpleGrid columns={{ base: 1, sm: 2, md: 3, lg: 4 }} spacing={8}>
-          {displayedProducts.map((product) => (
-            <Box 
-              key={product._id} 
-              bg="white" 
-              borderRadius="xl" 
-              overflow="hidden" 
-              boxShadow="sm"
-              border="1px solid"
-              borderColor="gray.100"
-              transition="all 0.3s"
-              _hover={{ transform: 'translateY(-5px)', boxShadow: 'md' }}
-            >
-              <Image 
-                src={product.imageUrl || 'https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?q=80&w=500'} 
-                alt={product.name}
-                h="250px"
-                w="100%"
-                objectFit="cover"
-              />
+        <VStack spacing={8} align="stretch">
+          <SimpleGrid columns={{ base: 1, sm: 2, md: 3, lg: 4 }} spacing={8}>
+            {displayedProducts.map((product) => (
+              <Box 
+                key={product._id} 
+                bg="white" 
+                borderRadius="xl" 
+                overflow="hidden" 
+                boxShadow="sm"
+                border="1px solid"
+                borderColor="gray.100"
+                transition="all 0.3s"
+                _hover={{ transform: 'translateY(-5px)', boxShadow: 'md' }}
+              >
+                <Image 
+                  src={product.imageUrl || 'https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?q=80&w=500'} 
+                  alt={product.name}
+                  h="250px"
+                  w="100%"
+                  objectFit="cover"
+                />
 
-              <VStack p={5} spacing={3} align="start">
-                <Badge colorScheme="amber" variant="outline" borderRadius="full" px={2}>
-                  {product.category || 'Joya'}
-                </Badge>
-                
-                <Heading size="md" color="gray.800" isTruncated maxW="100%">
-                  {product.name}
-                </Heading>
+                <VStack p={5} spacing={3} align="start">
+                  <Badge colorScheme="amber" variant="outline" borderRadius="full" px={2}>
+                    {product.category || 'Joya'}
+                  </Badge>
+                  
+                  <Heading size="md" color="gray.800" isTruncated maxW="100%">
+                    {product.name}
+                  </Heading>
 
-                <Text fontSize="lg" fontWeight="bold" color="#D4AF37">
-                  ${product.price?.toLocaleString()}
-                </Text>
+                  <Text fontSize="lg" fontWeight="bold" color="#D4AF37">
+                    ${product.price?.toLocaleString()}
+                  </Text>
 
-                <Button 
-                  onClick={() => navigate(`/product/${product._id}`)} 
-                  w="100%" 
-                  bg="#D4AF37" 
-                  color="white" 
-                  _hover={{ bg: '#B39230' }}
-                  size="sm"
-                >
-                  Ver Detalles
-                </Button>
-              </VStack>
-            </Box>
-          ))}
-        </SimpleGrid>
+                  <Button 
+                    onClick={() => navigate(`/product/${product._id}`)} 
+                    w="100%" 
+                    bg="#D4AF37" 
+                    color="white" 
+                    _hover={{ bg: '#B39230' }}
+                    size="sm"
+                  >
+                    Ver Detalles
+                  </Button>
+                </VStack>
+              </Box>
+            ))}
+          </SimpleGrid>
+
+          {/* 🔘 2. BOTÓN INFERIOR DE ACCIÓN (Aparece al pie de la grilla si solo hay 4 productos en pantalla) */}
+          {!showAllProducts && (
+            <Center pt={6}>
+              <Button
+                onClick={() => handleCategorySelect('all')}
+                size="lg"
+                bg="#D4AF37"
+                color="white"
+                _hover={{ bg: '#B39230', transform: 'scale(1.03)' }}
+                px={10}
+                py={6}
+                borderRadius="full"
+                boxShadow="lg"
+                transition="all 0.2s ease-in-out"
+              >
+                Ver Todo el Catálogo
+              </Button>
+            </Center>
+          )}
+        </VStack>
       )}
 
       {/* 🛠️ BOTÓN FLOTANTE DE ADMINISTRACIÓN */}
