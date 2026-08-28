@@ -140,7 +140,7 @@ function Catalog() {
               {verTodoActivo ? "CATÁLOGO COMPLETO" :
                categoriaActiva ? `COLECCIÓN DE ${categoriaActiva.toUpperCase()}` : 
                busquedaActiva ? `RESULTADOS PARA: "${busquedaActiva}"` : 
-               "Últimas Incorporaciones"}
+               "¡Últimas Novedades!"}
             </Heading>
             <Text color="gray.600" fontStyle="italic" fontSize={{ base: 'md', md: 'lg' }}>
               {busquedaActiva 

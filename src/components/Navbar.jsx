@@ -111,7 +111,7 @@ function Navbar() {
 
             <MenuList zIndex="20">
               <MenuItem onClick={() => navigate('/')} fontWeight="bold" color="#D4AF37">
-                Ver Todo el Catálogo
+                INICIO
               </MenuItem>
               {categorias.map((cat, index) => (
                 <MenuItem key={index} onClick={() => handleCategorySelect(cat)}>
