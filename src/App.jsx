@@ -1,17 +1,29 @@
-import { useEffect } from 'react'; // 👈 1. Importamos useEffect desde React
+import React, { useEffect, lazy, Suspense } from 'react'; 
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { Center, Spinner } from '@chakra-ui/react';
 import { CartProvider } from './context/CartContext';
-import Login from './pages/Login';
-import Catalog from './pages/Catalog'; // 👈 Importamos tu página de catálogo
-import ProductDetail from './pages/ProductDetail'; // 👈 Importamos tu página de detalle de producto
-import Admin from './pages/Admin';
-import EditProduct from './pages/EditProduct'; // 👈 Importamos la página de editado
-import CartPage from './pages/CartPage'; // 👈 Importamos la página del carrito
-import Navbar from './components/Navbar'; // 👈 Importamos el componente Navbar
-import ForgotPassword from './pages/ForgotPassword'; // 👈 Importamos la página de recuperación de contraseña
-import ChangePassword from './pages/ChangePassword'; // 👈 Importamos la página de cambio de contraseña
+
+// 🌟 Importación estándar para componentes globales (permanecen en memoria)
+import Navbar from './components/Navbar'; 
 import Footer from './components/Footer';
 import TopBanner from './components/TopBanner';
+
+// 🚀 CARGA DIFERIDA (React.lazy): Las rutas de la carpeta /pages se cargan bajo demanda
+const Login = lazy(() => import('./pages/Login'));
+const Catalog = lazy(() => import('./pages/Catalog'));
+const ProductDetail = lazy(() => import('./pages/ProductDetail'));
+const Admin = lazy(() => import('./pages/Admin'));
+const EditProduct = lazy(() => import('./pages/EditProduct'));
+const CartPage = lazy(() => import('./pages/CartPage'));
+const ForgotPassword = lazy(() => import('./pages/ForgotPassword'));
+const ChangePassword = lazy(() => import('./pages/ChangePassword'));
+
+// ⏳ Componente de fallback visual mientras React descarga el chunk JS de la vista
+const PageLoader = () => (
+  <Center h="60vh">
+    <Spinner size="xl" color="#D4AF37" thickness="4px" />
+  </Center>
+);
 
 function App() {
 
@@ -24,7 +36,7 @@ function App() {
       localStorage.removeItem('adminToken');
       sessionStorage.removeItem('sesionFresca');
       
-      // Forzamos la actualización de componentes activos (como ProductDetail.jsx)
+      // Forzamos la actualización de componentes activos
       window.dispatchEvent(new Event('storage'));
     };
 
@@ -39,28 +51,26 @@ function App() {
 
   return (
     <CartProvider>
-    <Router>
-    <TopBanner />
-      <Navbar /> {/* Renderizamos el Navbar en todas las páginas */}
-      <Routes>
-        <Route path="/login" element={<Login />} />
+      <Router>
+        <TopBanner />
+        <Navbar /> {/* Renderizado síncrono estándar */}
         
-        {/* La página de inicio "/" ahora mostrará el catálogo oficial */}
-        <Route path="/" element={<Catalog />} />
-        
-        {/* Ruta dinámica que recibe el ID de la joya */}
-        <Route path="/product/:id" element={<ProductDetail />} />
-        
-        {/* Ruta para la página de administración */}
-        <Route path="/admin" element={<Admin />} />
-         {/* Ruta para la página de edición */}
-        <Route path="/edit-product/:id" element={<EditProduct />} />
-      <Route path="/cart" element={<CartPage />} />
-     <Route path="/forgot-password" element={<ForgotPassword />} />
-      <Route path="/change-password/:token" element={<ChangePassword />} />
-      </Routes>
-      <Footer />
-    </Router>
+        {/* 🌟 Suspense envuelve únicamente la zona dinámica de las páginas */}
+        <Suspense fallback={<PageLoader />}>
+          <Routes>
+            <Route path="/login" element={<Login />} />
+            <Route path="/" element={<Catalog />} />
+            <Route path="/product/:id" element={<ProductDetail />} />
+            <Route path="/admin" element={<Admin />} />
+            <Route path="/edit-product/:id" element={<EditProduct />} />
+            <Route path="/cart" element={<CartPage />} />
+            <Route path="/forgot-password" element={<ForgotPassword />} />
+            <Route path="/change-password/:token" element={<ChangePassword />} />
+          </Routes>
+        </Suspense>
+
+        <Footer /> {/* Renderizado síncrono estándar */}
+      </Router>
     </CartProvider>
   );
 }

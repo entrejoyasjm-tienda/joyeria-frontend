@@ -8,7 +8,6 @@ import {
   Text, 
   Container, 
   SimpleGrid, 
-  Image, 
   Button, 
   VStack, 
   Badge, 
@@ -19,10 +18,13 @@ import {
 } from '@chakra-ui/react';
 import API from '../services/api'; 
 
-// 📸 Importación del logo transparente de la tienda
+// 📸 Logo transparente de la tienda
 import logoImg from '../assets/logo.png'; 
 
-// 🌟 Categorías con imágenes para las tarjetas (La primera opción representa "Ver Todo")
+// 🚀 Componente de Imagen Optimizada (Lazy Loading + Compresión de Cloudinary)
+import OptimizedImage from '../components/OptimizedImage';
+
+// 🌟 Categorías con imágenes para las tarjetas
 const CATEGORIES = [
   { id: 'todos', name: 'Ver Todo', image: '/images/todas.jpg', query: 'all' },
   { id: 'anillos', name: 'Anillos', image: '/images/anillos.jpg', query: 'Anillos' },
@@ -53,7 +55,6 @@ function Catalog() {
     const fetchProducts = async () => {
       setLoading(true);
       try {
-        // Si el usuario seleccionó 'all', traemos todos los productos sin filtro de categoría
         const categoryParam = category === 'all' ? '' : category;
 
         const response = await API.get('/products', {
@@ -91,7 +92,6 @@ function Catalog() {
   };
 
   // 🌟 LÓGICA DE RENDERIZADO CONDICIONAL:
-  // Determina si debemos mostrar todos los productos o solo los últimos 4.
   const verTodoActivo = categoriaActiva === 'all';
   const showAllProducts = Boolean((categoriaActiva && !verTodoActivo) || busquedaActiva || verTodoActivo);
   
@@ -124,15 +124,13 @@ function Catalog() {
       {/* 🌟 CABECERA CON LOGO Y TÍTULOS */}
       <Box textAlign="center" mb={8} bg="gray.50" py={8} borderRadius="xl" boxShadow="md">
         <VStack spacing={4} align="center">
-          <Image 
+          <OptimizedImage 
             src={logoImg} 
             alt="Entre Joyas J.M Logo" 
             h={{ base: '110px', md: '140px' }}
             w={{ base: '110px', md: '140px' }}
             borderRadius="full"
-            objectFit="cover"
-            transition="all 0.3s ease-in-out"
-            _hover={{ transform: 'scale(1.05)' }}
+            priority={true}
           />
 
           <Box>
@@ -153,7 +151,7 @@ function Catalog() {
         </VStack>
       </Box>
 
-      {/* 💎 1. SECCIÓN DE TARJETAS DE CATEGORÍAS (Incluye la tarjeta "Ver Todo") */}
+      {/* 💎 1. SECCIÓN DE TARJETAS DE CATEGORÍAS */}
       <Box mb={10}>
         <Heading size="md" mb={4} color="gray.700" textAlign="center">
           Explora por Categoría
@@ -185,12 +183,11 @@ function Catalog() {
                 }}
                 textAlign="center"
               >
-                <Image 
+                <OptimizedImage 
                   src={cat.image} 
                   alt={cat.name}
                   h="100px"
                   w="100%"
-                  objectFit="cover"
                   fallbackSrc="https://via.placeholder.com/150?text=Joya"
                 />
                 <Box p={2}>
@@ -221,7 +218,7 @@ function Catalog() {
       ) : (
         <VStack spacing={8} align="stretch">
           <SimpleGrid columns={{ base: 1, sm: 2, md: 3, lg: 4 }} spacing={8}>
-            {displayedProducts.map((product) => (
+            {displayedProducts.map((product, index) => (
               <Box 
                 key={product._id} 
                 bg="white" 
@@ -233,12 +230,15 @@ function Catalog() {
                 transition="all 0.3s"
                 _hover={{ transform: 'translateY(-5px)', boxShadow: 'md' }}
               >
-                <Image 
+                {/* 🚀 Imagen de Producto Optimizada (400x400 px ideal) */}
+                <OptimizedImage 
                   src={product.imageUrl || 'https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?q=80&w=500'} 
                   alt={product.name}
                   h="250px"
                   w="100%"
-                  objectFit="cover"
+                  width={400}
+                  height={400}
+                  priority={index === 0}
                 />
 
                 <VStack p={5} spacing={3} align="start">
@@ -269,7 +269,7 @@ function Catalog() {
             ))}
           </SimpleGrid>
 
-          {/* 🔘 2. BOTÓN INFERIOR DE ACCIÓN (Aparece al pie de la grilla si solo hay 4 productos en pantalla) */}
+          {/* 🔘 BOTÓN INFERIOR DE ACCIÓN */}
           {!showAllProducts && (
             <Center pt={6}>
               <Button
