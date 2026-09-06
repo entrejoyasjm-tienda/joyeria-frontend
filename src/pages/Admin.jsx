@@ -1,24 +1,19 @@
-import { useState , useEffect} from 'react';
+import { useState, useEffect } from 'react';
 import {
   Box, Container, VStack, Heading, FormControl, FormLabel, Input,
   Textarea, Select, Button, useToast, Image, SimpleGrid, 
   InputGroup, InputLeftElement, HStack, Switch, Text, Icon
 } from '@chakra-ui/react';
 import { useNavigate } from 'react-router-dom';
-import { FiPackage, FiTag, FiDollarSign, FiType, FiImage, FiArrowLeft, FiLogOut } from 'react-icons/fi';
+import { FiPackage, FiTag, FiDollarSign, FiType, FiArrowLeft, FiLogOut } from 'react-icons/fi';
 import API from '../services/api';
 
 function Admin() {
- 
   const navigate = useNavigate();
-  
   const toast = useToast();
- 
-// ==========================================
-  // 🔥 CÓDIGO CORREGIDO: Seguridad contra recarga de pantalla (F5)
+
   // ==========================================
-  // ==========================================
-  // 🔥 CÓDIGO CORREGIDO: Control de sesión y detector de F5 en tiempo real
+  // 🔒 Control de sesión y detector de F5 en tiempo real
   // ==========================================
   useEffect(() => {
     const token = localStorage.getItem('adminToken');
@@ -30,30 +25,26 @@ function Admin() {
       return;
     }
 
-    // Caso B: Si no existe la bandera de sesión fresca en la pestaña, se asume violación de seguridad
+    // Caso B: Si no existe la bandera de sesión fresca en la pestaña
     if (!esSesionFresca) {
       localStorage.removeItem('adminToken');
       navigate('/login');
       return;
     }
 
-    // Función que se ejecuta JUSTO cuando el usuario presiona F5, recarga o cierra la pestaña
+    // Limpieza de credenciales al recargar o cerrar pestaña
     const manejarRecargaPagina = () => {
-      // Destruimos las credenciales en el almacenamiento local antes de que la página se reinicie
       localStorage.removeItem('adminToken');
       sessionStorage.removeItem('sesionFresca');
     };
 
-    // Escuchamos el evento de desinstalación o recarga física del DOM en el navegador
     window.addEventListener('beforeunload', manejarRecargaPagina);
 
-    // Limpieza del evento cuando el componente se desmonte para evitar fugas de memoria
     return () => {
       window.removeEventListener('beforeunload', manejarRecargaPagina);
     };
   }, [navigate]);
 
-   
   // Estados del formulario
   const [name, setName] = useState('');
   const [price, setPrice] = useState('');
@@ -83,28 +74,37 @@ function Admin() {
     try {
       let imageUrl = '';
 
-      // Subida a Cloudinary (Usando FormData)
+      // Subida a Cloudinary usando FormData y fetch de forma segura
       if (imageFile) {
         const data = new FormData();
         data.append("file", imageFile);
-        data.append("upload_preset", "entrejoyas_preset"); // ⚠️ Reemplaza con tu preset de Cloudinary
-        data.append("cloud_name", "dxqawrvrq");    // ⚠️ Reemplaza con tu cloud name
+        data.append("upload_preset", "entrejoyas_preset"); // ⚠️ Verifica que sea exactamente tu preset Unsigned
 
         const res = await fetch(
           "https://api.cloudinary.com/v1_1/dxqawrvrq/image/upload",
-          { method: "POST", body: data }
+          { 
+            method: "POST", 
+            body: data 
+          }
         );
+
         const fileData = await res.json();
+
+        // Si la respuesta HTTP no es exitosa, se lanza un error con el mensaje de Cloudinary
+        if (!res.ok) {
+          throw new Error(fileData.error?.message || "Error al subir la imagen a Cloudinary");
+        }
+
         imageUrl = fileData.secure_url;
       }
 
-      // Enviar datos finales a TU Backend de MongoDB
+      // Enviar datos finales a tu Backend de MongoDB
       const newProduct = {
         name,
         price: Number(price),
         category,
         description,
-        imageUrl, // Aquí mandamos la URL que nos dio Cloudinary
+        imageUrl,
         inStock
       };
 
@@ -120,12 +120,13 @@ function Admin() {
 
       navigate('/'); // Volver al inicio para ver la nueva joya
     } catch (err) {
-      console.error(err);
+      console.error("Error en la publicación:", err);
       toast({
-        title: "Error",
-        description: "No se pudo guardar la joya. Revisa la consola.",
+        title: "Error al publicar",
+        description: err.message || "No se pudo guardar la joya. Revisa la consola.",
         status: "error",
         duration: 5000,
+        isClosable: true,
       });
     } finally {
       setLoading(false);
@@ -134,14 +135,11 @@ function Admin() {
 
   // 🌟 FUNCIÓN: Cierre de sesión
   const handleLogout = () => {
-    // 1. Removemos el token de seguridad y la bandera de sesión del almacenamiento
     localStorage.removeItem('adminToken');
     sessionStorage.removeItem('sesionFresca');
 
-    // 2. Disparamos un evento manual para notificar a componentes como ProductDetail.jsx
     window.dispatchEvent(new Event('storage'));
 
-    // 3. Notificamos al usuario con Chakra UI Toast
     toast({
       title: "Sesión cerrada",
       description: "Has salido del panel de administración.",
@@ -150,7 +148,6 @@ function Admin() {
       isClosable: true,
     });
 
-    // 4. Redirigimos al Login inmediatamente
     navigate('/login');
   };
   
@@ -158,21 +155,21 @@ function Admin() {
     <Box bg="gray.50" minH="100vh" py={10}>
       <Container maxW="container.md">
         
-        {/* Encabezado */}
-         <Button 
-      leftIcon={<FiLogOut />} 
-      colorScheme="red" 
-      variant="outline"
-      size="sm"
-      onClick={handleLogout}
-    >
-      Cerrar Sesión
-    </Button>
-        <HStack mb={8} justify="space-between">
+        {/* Encabezado con Botón Volver y Cerrar Sesión */}
+        <HStack mb={8} justify="space-between" align="center">
           <Button leftIcon={<FiArrowLeft />} variant="ghost" onClick={() => navigate('/')}>
             Volver
           </Button>
           <Heading size="lg" color="gray.700">Panel de Inventario</Heading>
+          <Button 
+            leftIcon={<FiLogOut />} 
+            colorScheme="red" 
+            variant="outline"
+            size="sm"
+            onClick={handleLogout}
+          >
+            Cerrar Sesión
+          </Button>
         </HStack>
 
         <Box bg="white" p={8} borderRadius="2xl" boxShadow="xl" border="1px solid" borderColor="gray.100">
@@ -227,7 +224,6 @@ function Admin() {
                     <option value="Dijes">Dijes</option>
                     <option value="Grabados">Grabados</option>
                     <option value="Otros">Otros</option>
-
                   </Select>
                 </FormControl>
               </SimpleGrid>
@@ -304,8 +300,6 @@ function Admin() {
         </Box>
         
       </Container>
-     
-  
     </Box>
   );
 }
