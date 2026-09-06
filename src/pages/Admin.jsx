@@ -240,9 +240,9 @@ function Admin() {
                 />
               </FormControl>
 
-              {/* Subida de Imagen */}
+              {/* Subida de Imagen (Actualizado con id y name) */}
               <FormControl isRequired>
-                <FormLabel fontWeight="bold">Imagen de la Joya</FormLabel>
+                <FormLabel htmlFor="imageFile" fontWeight="bold">Imagen de la Joya</FormLabel>
                 <Box 
                   border="2px dashed" 
                   borderColor="gray.200" 
@@ -253,6 +253,8 @@ function Admin() {
                   transition="0.3s"
                 >
                   <input 
+                    id="imageFile"
+                    name="imageFile"
                     type="file" 
                     accept="image/*" 
                     onChange={handleImageChange} 
