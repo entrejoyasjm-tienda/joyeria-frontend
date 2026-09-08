@@ -1,7 +1,7 @@
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import { IconButton } from '@chakra-ui/react'; 
-import { FiSettings, FiChevronLeft, FiChevronRight } from 'react-icons/fi'; 
+import { FiSettings, FiChevronLeft, FiChevronRight, FiArrowRight } from 'react-icons/fi'; 
 import { 
   Box, 
   Heading, 
@@ -22,7 +22,7 @@ import API from '../services/api';
 // 📸 Logo transparente de la tienda
 import logoImg from '../assets/logo.png'; 
 
-// 🚀 Componente de Imagen Optimizada (Lazy Loading + Compresión de Cloudinary)
+// 🚀 Componente de Imagen Optimizada
 import OptimizedImage from '../components/OptimizedImage';
 
 // 🌟 Categorías con imágenes para las tarjetas
@@ -44,16 +44,24 @@ function Catalog() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // 📄 Estados nuevos para la gestión de la paginación
+  // 📄 Estados para la gestión de la paginación
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
 
   const location = useLocation();
   const navigate = useNavigate();
 
-  // Escuchar cambios en la URL para solicitar productos paginados al backend
+  // Obtener parámetros de la URL
+  const queryParams = new URLSearchParams(location.search);
+  const categoriaActiva = queryParams.get('category');
+  const busquedaActiva = queryParams.get('search');
+  const verTodoActivo = categoriaActiva === 'all';
+
+  // 📌 Determinar si el usuario está en la página inicial sin filtros
+  const isHomePage = !categoriaActiva && !busquedaActiva;
+
+  // Escuchar cambios en la URL para solicitar los productos según la vista
   useEffect(() => {
-    const queryParams = new URLSearchParams(location.search);
     const search = queryParams.get('search') || '';
     const category = queryParams.get('category') || '';
     const pageFromUrl = parseInt(queryParams.get('page'), 10) || 1;
@@ -63,24 +71,29 @@ function Catalog() {
       try {
         const categoryParam = category === 'all' ? '' : category;
 
-        // 🚀 Petición a la API enviando los parámetros de búsqueda, categoría y página
+        // 🎯 Definir el límite según la vista:
+        // En la página inicial se solicitan solo 4 productos; en catálogo completo se solicitan 12.
+        const limitParam = isHomePage ? 4 : 12;
+
+        // 🚀 Petición a la API enviando los parámetros correspondientes
         const response = await API.get('/products', {
           params: {
             search: search,
             category: categoryParam,
-            page: pageFromUrl,
-            limit: 12
+            page: isHomePage ? 1 : pageFromUrl,
+            limit: limitParam
           }
         }); 
         
-        // 🌟 Adaptación a la respuesta paginada del backend
+        // Adaptación a la respuesta devuelta por el backend
         if (response.data && Array.isArray(response.data.products)) {
           setProducts(response.data.products);
           setCurrentPage(response.data.currentPage || 1);
           setTotalPages(response.data.totalPages || 1);
         } else if (Array.isArray(response.data)) {
-          // Retrocompatibilidad en caso de que el backend devuelva un array plano
-          setProducts(response.data);
+          // Si el backend devuelve un arreglo plano, tomamos solo 4 elementos si es la página inicial
+          const data = response.data;
+          setProducts(isHomePage ? data.slice(0, 4) : data);
           setCurrentPage(1);
           setTotalPages(1);
         }
@@ -95,14 +108,9 @@ function Catalog() {
     };
 
     fetchProducts();
-  }, [location.search]);
+  }, [location.search, isHomePage]);
 
-  // Obtener estado activo de filtros desde los parámetros de la URL
-  const queryParams = new URLSearchParams(location.search);
-  const categoriaActiva = queryParams.get('category');
-  const busquedaActiva = queryParams.get('search');
-
-  // Navegación respetando la categoría seleccionada y reiniciando a la página 1
+  // Manejo de la selección de categoría
   const handleCategorySelect = (categoriaQuery) => {
     if (!categoriaQuery) {
       navigate('/');
@@ -111,15 +119,13 @@ function Catalog() {
     }
   };
 
-  // Función para cambiar de página conservando los filtros activos en la URL
+  // Cambio de página en el catálogo completo
   const handlePageChange = (newPage) => {
     const currentParams = new URLSearchParams(location.search);
     currentParams.set('page', newPage);
     navigate(`/?${currentParams.toString()}`);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
-
-  const verTodoActivo = categoriaActiva === 'all';
 
   if (loading) {
     return (
@@ -167,13 +173,13 @@ function Catalog() {
                 ? "Revisa las piezas que coinciden con tu criterio." 
                 : (categoriaActiva || verTodoActivo)
                 ? "Explora todos los modelos disponibles en nuestra tienda." 
-                : "Nuestras piezas más recientes agregadas al catálogo."}
+                : "Descubre las últimas 4 piezas agregadas a nuestra colección."}
             </Text>
           </Box>
         </VStack>
       </Box>
 
-      {/* 💎 1. SECCIÓN DE TARJETAS DE CATEGORÍAS */}
+      {/* 💎 SECCIÓN DE TARJETAS DE CATEGORÍAS */}
       <Box mb={10}>
         <Heading size="md" mb={4} color="gray.700" textAlign="center">
           Explora por Categoría
@@ -290,11 +296,29 @@ function Catalog() {
             ))}
           </SimpleGrid>
 
-          {/* 📄 CONTROLES DE PAGINACIÓN DE LA INTERFAZ */}
-          {totalPages > 1 && (
+          {/* 🔗 BOTÓN "VER TODO EL CATÁLOGO" EN LA PÁGINA INICIAL */}
+          {isHomePage && (
+            <Center pt={4}>
+              <Button
+                rightIcon={<FiArrowRight />}
+                onClick={() => handleCategorySelect('all')}
+                bg="#D4AF37"
+                color="white"
+                size="lg"
+                px={8}
+                _hover={{ bg: '#B39230', transform: 'scale(1.03)' }}
+                transition="all 0.2s"
+                boxShadow="md"
+              >
+                Ver Todo el Catálogo
+              </Button>
+            </Center>
+          )}
+
+          {/* 📄 PAGINACIÓN (SOLO CUANDO NO ESTAMOS EN LA PÁGINA INICIAL) */}
+          {!isHomePage && totalPages > 1 && (
             <Center pt={8}>
               <HStack spacing={3}>
-                {/* Botón Anterior */}
                 <Button
                   leftIcon={<FiChevronLeft />}
                   onClick={() => handlePageChange(currentPage - 1)}
@@ -307,7 +331,6 @@ function Catalog() {
                   Anterior
                 </Button>
 
-                {/* Números de Página */}
                 {Array.from({ length: totalPages }, (_, i) => i + 1).map((pageNum) => (
                   <Button
                     key={pageNum}
@@ -323,7 +346,6 @@ function Catalog() {
                   </Button>
                 ))}
 
-                {/* Botón Siguiente */}
                 <Button
                   rightIcon={<FiChevronRight />}
                   onClick={() => handlePageChange(currentPage + 1)}
