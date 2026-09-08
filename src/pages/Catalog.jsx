@@ -311,57 +311,73 @@ function Catalog() {
             </Center>
           )}
 
-          {/* 📄 PAGINACIÓN DIRECTA: Anterior, 1, 2..., Siguiente */}
-          {!isHomePage && totalPages > 1 && (
-            <Center pt={8}>
-              <HStack spacing={2}>
-                {/* 1. Botón Anterior */}
-                <Button
-                  leftIcon={<FiChevronLeft />}
-                  onClick={() => handlePageChange(currentPage - 1)}
-                  isDisabled={currentPage === 1}
-                  variant="outline"
-                  borderColor="#D4AF37"
-                  color="#D4AF37"
-                  _hover={{ bg: '#FFF8E7' }}
-                  size="md"
-                >
-                  Anterior
-                </Button>
+          {/* 📄 PAGINACIÓN LIMITADA EXCLUSIVAMENTE A: Anterior, 1, 2, Siguiente */}
+{!isHomePage && totalPages > 1 && (
+  <Center pt={8}>
+    <HStack spacing={2}>
+      
+      {/* 1. Botón Anterior */}
+      <Button
+        leftIcon={<FiChevronLeft />}
+        onClick={() => handlePageChange(currentPage - 1)}
+        isDisabled={currentPage === 1}
+        variant="outline"
+        borderColor="#D4AF37"
+        color="#D4AF37"
+        _hover={{ bg: '#FFF8E7' }}
+        size="md"
+      >
+        Anterior
+      </Button>
 
-                {/* 2. Botones de Números de Página (1, 2, ...) */}
-                {Array.from({ length: totalPages }, (_, i) => i + 1).map((pageNum) => (
-                  <Button
-                    key={pageNum}
-                    onClick={() => handlePageChange(pageNum)}
-                    bg={pageNum === currentPage ? '#D4AF37' : 'white'}
-                    color={pageNum === currentPage ? 'white' : 'gray.700'}
-                    border="1px solid"
-                    borderColor="#D4AF37"
-                    _hover={{ bg: pageNum === currentPage ? '#B39230' : '#FFF8E7' }}
-                    size="md"
-                    minW="40px"
-                  >
-                    {pageNum}
-                  </Button>
-                ))}
+      {/* 2. Botón Página 1 */}
+      <Button
+        onClick={() => handlePageChange(1)}
+        bg={currentPage === 1 ? '#D4AF37' : 'white'}
+        color={currentPage === 1 ? 'white' : 'gray.700'}
+        border="1px solid"
+        borderColor="#D4AF37"
+        _hover={{ bg: currentPage === 1 ? '#B39230' : '#FFF8E7' }}
+        size="md"
+        minW="40px"
+      >
+        1
+      </Button>
 
-                {/* 3. Botón Siguiente */}
-                <Button
-                  rightIcon={<FiChevronRight />}
-                  onClick={() => handlePageChange(currentPage + 1)}
-                  isDisabled={currentPage === totalPages}
-                  variant="outline"
-                  borderColor="#D4AF37"
-                  color="#D4AF37"
-                  _hover={{ bg: '#FFF8E7' }}
-                  size="md"
-                >
-                  Siguiente
-                </Button>
-              </HStack>
-            </Center>
-          )}
+      {/* 3. Botón Página 2 (Se muestra solo si existe la página 2) */}
+      {totalPages >= 2 && (
+        <Button
+          onClick={() => handlePageChange(2)}
+          bg={currentPage === 2 ? '#D4AF37' : 'white'}
+          color={currentPage === 2 ? 'white' : 'gray.700'}
+          border="1px solid"
+          borderColor="#D4AF37"
+          _hover={{ bg: currentPage === 2 ? '#B39230' : '#FFF8E7' }}
+          size="md"
+          minW="40px"
+        >
+          2
+        </Button>
+      )}
+
+      {/* 4. Botón Siguiente */}
+      <Button
+        rightIcon={<FiChevronRight />}
+        onClick={() => handlePageChange(currentPage + 1)}
+        isDisabled={currentPage === Math.min(totalPages, 2)}
+        variant="outline"
+        borderColor="#D4AF37"
+        color="#D4AF37"
+        _hover={{ bg: '#FFF8E7' }}
+        size="md"
+      >
+        Siguiente
+      </Button>
+
+    </HStack>
+  </Center>
+)}
+            
         </VStack>
       )}
 
