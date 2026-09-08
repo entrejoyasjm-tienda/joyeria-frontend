@@ -1,7 +1,7 @@
-import { useLocation, useNavigate, Link } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import { IconButton } from '@chakra-ui/react'; 
-import { FiSettings } from 'react-icons/fi'; 
+import { FiSettings, FiChevronLeft, FiChevronRight } from 'react-icons/fi'; 
 import { 
   Box, 
   Heading, 
@@ -14,7 +14,8 @@ import {
   Spinner, 
   Center,
   Alert,
-  AlertIcon
+  AlertIcon,
+  HStack
 } from '@chakra-ui/react';
 import API from '../services/api'; 
 
@@ -43,28 +44,47 @@ function Catalog() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
+  // 📄 Estados nuevos para la gestión de la paginación
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+
   const location = useLocation();
   const navigate = useNavigate();
 
-  // Escuchar cambios en la URL para solicitar productos al backend
+  // Escuchar cambios en la URL para solicitar productos paginados al backend
   useEffect(() => {
     const queryParams = new URLSearchParams(location.search);
     const search = queryParams.get('search') || '';
     const category = queryParams.get('category') || '';
+    const pageFromUrl = parseInt(queryParams.get('page'), 10) || 1;
 
     const fetchProducts = async () => {
       setLoading(true);
       try {
         const categoryParam = category === 'all' ? '' : category;
 
+        // 🚀 Petición a la API enviando los parámetros de búsqueda, categoría y página
         const response = await API.get('/products', {
           params: {
             search: search,
-            category: categoryParam
+            category: categoryParam,
+            page: pageFromUrl,
+            limit: 12
           }
         }); 
         
-        setProducts(response.data);
+        // 🌟 Adaptación a la respuesta paginada del backend
+        if (response.data && Array.isArray(response.data.products)) {
+          setProducts(response.data.products);
+          setCurrentPage(response.data.currentPage || 1);
+          setTotalPages(response.data.totalPages || 1);
+        } else if (Array.isArray(response.data)) {
+          // Retrocompatibilidad en caso de que el backend devuelva un array plano
+          setProducts(response.data);
+          setCurrentPage(1);
+          setTotalPages(1);
+        }
+
         setError(null);
       } catch (err) {
         console.error("Error al traer productos:", err);
@@ -82,22 +102,24 @@ function Catalog() {
   const categoriaActiva = queryParams.get('category');
   const busquedaActiva = queryParams.get('search');
 
-  // Navegación respetando los parámetros de la URL
+  // Navegación respetando la categoría seleccionada y reiniciando a la página 1
   const handleCategorySelect = (categoriaQuery) => {
     if (!categoriaQuery) {
       navigate('/');
     } else {
-      navigate(`/?category=${encodeURIComponent(categoriaQuery)}`);
+      navigate(`/?category=${encodeURIComponent(categoriaQuery)}&page=1`);
     }
   };
 
-  // 🌟 LÓGICA DE RENDERIZADO CONDICIONAL:
+  // Función para cambiar de página conservando los filtros activos en la URL
+  const handlePageChange = (newPage) => {
+    const currentParams = new URLSearchParams(location.search);
+    currentParams.set('page', newPage);
+    navigate(`/?${currentParams.toString()}`);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
   const verTodoActivo = categoriaActiva === 'all';
-  const showAllProducts = Boolean((categoriaActiva && !verTodoActivo) || busquedaActiva || verTodoActivo);
-  
-  const displayedProducts = showAllProducts 
-    ? products 
-    : [...products].slice(-4).reverse();
 
   if (loading) {
     return (
@@ -206,7 +228,7 @@ function Catalog() {
       </Box>
 
       {/* 📦 GRILLA DE PRODUCTOS */}
-      {displayedProducts.length === 0 ? (
+      {products.length === 0 ? (
         <VStack spacing={4} py={10}>
           <Text textAlign="center" color="gray.500" fontSize="lg">
             No se encontraron joyas disponibles para tu criterio de búsqueda.
@@ -218,7 +240,7 @@ function Catalog() {
       ) : (
         <VStack spacing={8} align="stretch">
           <SimpleGrid columns={{ base: 1, sm: 2, md: 3, lg: 4 }} spacing={8}>
-            {displayedProducts.map((product, index) => (
+            {products.map((product, index) => (
               <Box 
                 key={product._id} 
                 bg="white" 
@@ -230,7 +252,6 @@ function Catalog() {
                 transition="all 0.3s"
                 _hover={{ transform: 'translateY(-5px)', boxShadow: 'md' }}
               >
-                {/* 🚀 Imagen de Producto Optimizada (400x400 px ideal) */}
                 <OptimizedImage 
                   src={product.imageUrl || 'https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?q=80&w=500'} 
                   alt={product.name}
@@ -269,23 +290,52 @@ function Catalog() {
             ))}
           </SimpleGrid>
 
-          {/* 🔘 BOTÓN INFERIOR DE ACCIÓN */}
-          {!showAllProducts && (
-            <Center pt={6}>
-              <Button
-                onClick={() => handleCategorySelect('all')}
-                size="lg"
-                bg="#D4AF37"
-                color="white"
-                _hover={{ bg: '#B39230', transform: 'scale(1.03)' }}
-                px={10}
-                py={6}
-                borderRadius="full"
-                boxShadow="lg"
-                transition="all 0.2s ease-in-out"
-              >
-                Ver Todo el Catálogo
-              </Button>
+          {/* 📄 CONTROLES DE PAGINACIÓN DE LA INTERFAZ */}
+          {totalPages > 1 && (
+            <Center pt={8}>
+              <HStack spacing={3}>
+                {/* Botón Anterior */}
+                <Button
+                  leftIcon={<FiChevronLeft />}
+                  onClick={() => handlePageChange(currentPage - 1)}
+                  isDisabled={currentPage === 1}
+                  variant="outline"
+                  borderColor="#D4AF37"
+                  color="#D4AF37"
+                  _hover={{ bg: '#FFF8E7' }}
+                >
+                  Anterior
+                </Button>
+
+                {/* Números de Página */}
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map((pageNum) => (
+                  <Button
+                    key={pageNum}
+                    onClick={() => handlePageChange(pageNum)}
+                    bg={pageNum === currentPage ? '#D4AF37' : 'white'}
+                    color={pageNum === currentPage ? 'white' : 'gray.700'}
+                    border="1px solid"
+                    borderColor="#D4AF37"
+                    _hover={{ bg: pageNum === currentPage ? '#B39230' : '#FFF8E7' }}
+                    size="md"
+                  >
+                    {pageNum}
+                  </Button>
+                ))}
+
+                {/* Botón Siguiente */}
+                <Button
+                  rightIcon={<FiChevronRight />}
+                  onClick={() => handlePageChange(currentPage + 1)}
+                  isDisabled={currentPage === totalPages}
+                  variant="outline"
+                  borderColor="#D4AF37"
+                  color="#D4AF37"
+                  _hover={{ bg: '#FFF8E7' }}
+                >
+                  Siguiente
+                </Button>
+              </HStack>
             </Center>
           )}
         </VStack>
