@@ -44,7 +44,7 @@ function Catalog() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // 📄 Estados para la gestión de la paginación
+  // 📄 Estados para la gestión de paginación
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
 
@@ -57,10 +57,10 @@ function Catalog() {
   const busquedaActiva = queryParams.get('search');
   const verTodoActivo = categoriaActiva === 'all';
 
-  // 📌 Determinar si el usuario está en la página inicial sin filtros
+  // 📌 Identificar si estamos en la página inicial sin filtros
   const isHomePage = !categoriaActiva && !busquedaActiva;
 
-  // Escuchar cambios en la URL para solicitar los productos según la vista
+  // Cargar productos al cambiar los parámetros de búsqueda o página en la URL
   useEffect(() => {
     const search = queryParams.get('search') || '';
     const category = queryParams.get('category') || '';
@@ -71,11 +71,9 @@ function Catalog() {
       try {
         const categoryParam = category === 'all' ? '' : category;
 
-        // 🎯 Definir el límite según la vista:
-        // En la página inicial se solicitan solo 4 productos; en catálogo completo se solicitan 12.
+        // Limite: 4 productos en portada, 12 en el catálogo completo
         const limitParam = isHomePage ? 4 : 12;
 
-        // 🚀 Petición a la API enviando los parámetros correspondientes
         const response = await API.get('/products', {
           params: {
             search: search,
@@ -85,13 +83,11 @@ function Catalog() {
           }
         }); 
         
-        // Adaptación a la respuesta devuelta por el backend
         if (response.data && Array.isArray(response.data.products)) {
           setProducts(response.data.products);
           setCurrentPage(response.data.currentPage || 1);
           setTotalPages(response.data.totalPages || 1);
         } else if (Array.isArray(response.data)) {
-          // Si el backend devuelve un arreglo plano, tomamos solo 4 elementos si es la página inicial
           const data = response.data;
           setProducts(isHomePage ? data.slice(0, 4) : data);
           setCurrentPage(1);
@@ -110,7 +106,7 @@ function Catalog() {
     fetchProducts();
   }, [location.search, isHomePage]);
 
-  // Manejo de la selección de categoría
+  // Selección de categoría
   const handleCategorySelect = (categoriaQuery) => {
     if (!categoriaQuery) {
       navigate('/');
@@ -119,7 +115,7 @@ function Catalog() {
     }
   };
 
-  // Cambio de página en el catálogo completo
+  // Cambio de página en la URL
   const handlePageChange = (newPage) => {
     const currentParams = new URLSearchParams(location.search);
     currentParams.set('page', newPage);
@@ -296,7 +292,7 @@ function Catalog() {
             ))}
           </SimpleGrid>
 
-          {/* 🔗 BOTÓN "VER TODO EL CATÁLOGO" EN LA PÁGINA INICIAL */}
+          {/* 🔗 BOTÓN DE VER TODO EN LA PÁGINA INICIAL */}
           {isHomePage && (
             <Center pt={4}>
               <Button
@@ -315,10 +311,11 @@ function Catalog() {
             </Center>
           )}
 
-          {/* 📄 PAGINACIÓN (SOLO CUANDO NO ESTAMOS EN LA PÁGINA INICIAL) */}
+          {/* 📄 PAGINACIÓN DIRECTA: Anterior, 1, 2..., Siguiente */}
           {!isHomePage && totalPages > 1 && (
             <Center pt={8}>
-              <HStack spacing={3}>
+              <HStack spacing={2}>
+                {/* 1. Botón Anterior */}
                 <Button
                   leftIcon={<FiChevronLeft />}
                   onClick={() => handlePageChange(currentPage - 1)}
@@ -327,10 +324,12 @@ function Catalog() {
                   borderColor="#D4AF37"
                   color="#D4AF37"
                   _hover={{ bg: '#FFF8E7' }}
+                  size="md"
                 >
                   Anterior
                 </Button>
 
+                {/* 2. Botones de Números de Página (1, 2, ...) */}
                 {Array.from({ length: totalPages }, (_, i) => i + 1).map((pageNum) => (
                   <Button
                     key={pageNum}
@@ -341,11 +340,13 @@ function Catalog() {
                     borderColor="#D4AF37"
                     _hover={{ bg: pageNum === currentPage ? '#B39230' : '#FFF8E7' }}
                     size="md"
+                    minW="40px"
                   >
                     {pageNum}
                   </Button>
                 ))}
 
+                {/* 3. Botón Siguiente */}
                 <Button
                   rightIcon={<FiChevronRight />}
                   onClick={() => handlePageChange(currentPage + 1)}
@@ -354,6 +355,7 @@ function Catalog() {
                   borderColor="#D4AF37"
                   color="#D4AF37"
                   _hover={{ bg: '#FFF8E7' }}
+                  size="md"
                 >
                   Siguiente
                 </Button>
