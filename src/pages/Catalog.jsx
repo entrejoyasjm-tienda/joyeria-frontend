@@ -1,7 +1,7 @@
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import { IconButton } from '@chakra-ui/react'; 
-import { FiSettings, FiChevronLeft, FiChevronRight, FiArrowRight } from 'react-icons/fi'; 
+import { FiSettings, FiChevronLeft, FiPlus } from 'react-icons/fi'; 
 import { 
   Box, 
   Heading, 
@@ -42,9 +42,10 @@ const CATEGORIES = [
 function Catalog() {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState(null);
 
-  // 📄 Estados para la gestión de paginación
+  // 📄 Estados para la gestión de la carga acumulativa
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
 
@@ -60,37 +61,33 @@ function Catalog() {
   // 📌 Identificar si estamos en la página inicial sin filtros
   const isHomePage = !categoriaActiva && !busquedaActiva;
 
-  // Cargar productos al cambiar los parámetros de búsqueda o página en la URL
+  // Cargar primera página de productos al cambiar filtros en la URL
   useEffect(() => {
     const search = queryParams.get('search') || '';
     const category = queryParams.get('category') || '';
-    const pageFromUrl = parseInt(queryParams.get('page'), 10) || 1;
 
-    const fetchProducts = async () => {
+    const fetchInitialProducts = async () => {
       setLoading(true);
+      setCurrentPage(1); // Reiniciar a la página 1 al cambiar de categoría
       try {
         const categoryParam = category === 'all' ? '' : category;
-
-        // Limite: 4 productos en portada, 12 en el catálogo completo
         const limitParam = isHomePage ? 4 : 12;
 
         const response = await API.get('/products', {
           params: {
             search: search,
             category: categoryParam,
-            page: isHomePage ? 1 : pageFromUrl,
+            page: 1,
             limit: limitParam
           }
         }); 
         
         if (response.data && Array.isArray(response.data.products)) {
           setProducts(response.data.products);
-          setCurrentPage(response.data.currentPage || 1);
           setTotalPages(response.data.totalPages || 1);
         } else if (Array.isArray(response.data)) {
           const data = response.data;
           setProducts(isHomePage ? data.slice(0, 4) : data);
-          setCurrentPage(1);
           setTotalPages(1);
         }
 
@@ -103,24 +100,48 @@ function Catalog() {
       }
     };
 
-    fetchProducts();
+    fetchInitialProducts();
   }, [location.search, isHomePage]);
+
+  // Función para cargar acumulativamente la siguiente página de productos
+  const handleLoadMore = async () => {
+    if (currentPage >= totalPages || loadingMore) return;
+
+    setLoadingMore(true);
+    const nextPage = currentPage + 1;
+    const search = queryParams.get('search') || '';
+    const category = queryParams.get('category') || '';
+    const categoryParam = category === 'all' ? '' : category;
+
+    try {
+      const response = await API.get('/products', {
+        params: {
+          search: search,
+          category: categoryParam,
+          page: nextPage,
+          limit: 12
+        }
+      });
+
+      if (response.data && Array.isArray(response.data.products)) {
+        // 🚀 Concatenación: Mantiene los productos anteriores y agrega los nuevos
+        setProducts((prevProducts) => [...prevProducts, ...response.data.products]);
+        setCurrentPage(nextPage);
+      }
+    } catch (err) {
+      console.error("Error al cargar más productos:", err);
+    } finally {
+      setLoadingMore(false);
+    }
+  };
 
   // Selección de categoría
   const handleCategorySelect = (categoriaQuery) => {
     if (!categoriaQuery) {
       navigate('/');
     } else {
-      navigate(`/?category=${encodeURIComponent(categoriaQuery)}&page=1`);
+      navigate(`/?category=${encodeURIComponent(categoriaQuery)}`);
     }
-  };
-
-  // Cambio de página en la URL
-  const handlePageChange = (newPage) => {
-    const currentParams = new URLSearchParams(location.search);
-    currentParams.set('page', newPage);
-    navigate(`/?${currentParams.toString()}`);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   if (loading) {
@@ -296,7 +317,6 @@ function Catalog() {
           {isHomePage && (
             <Center pt={4}>
               <Button
-                rightIcon={<FiArrowRight />}
                 onClick={() => handleCategorySelect('all')}
                 bg="#D4AF37"
                 color="white"
@@ -311,73 +331,26 @@ function Catalog() {
             </Center>
           )}
 
-          {/* 📄 PAGINACIÓN LIMITADA EXCLUSIVAMENTE A: Anterior, 1, 2, Siguiente */}
-{!isHomePage && totalPages > 1 && (
-  <Center pt={8}>
-    <HStack spacing={2}>
-      
-      {/* 1. Botón Anterior */}
-      <Button
-        leftIcon={<FiChevronLeft />}
-        onClick={() => handlePageChange(currentPage - 1)}
-        isDisabled={currentPage === 1}
-        variant="outline"
-        borderColor="#D4AF37"
-        color="#D4AF37"
-        _hover={{ bg: '#FFF8E7' }}
-        size="md"
-      >
-        Anterior
-      </Button>
-
-      {/* 2. Botón Página 1 */}
-      <Button
-        onClick={() => handlePageChange(1)}
-        bg={currentPage === 1 ? '#D4AF37' : 'white'}
-        color={currentPage === 1 ? 'white' : 'gray.700'}
-        border="1px solid"
-        borderColor="#D4AF37"
-        _hover={{ bg: currentPage === 1 ? '#B39230' : '#FFF8E7' }}
-        size="md"
-        minW="40px"
-      >
-        1
-      </Button>
-
-      {/* 3. Botón Página 2 (Se muestra solo si existe la página 2) */}
-      {totalPages >= 2 && (
-        <Button
-          onClick={() => handlePageChange(2)}
-          bg={currentPage === 2 ? '#D4AF37' : 'white'}
-          color={currentPage === 2 ? 'white' : 'gray.700'}
-          border="1px solid"
-          borderColor="#D4AF37"
-          _hover={{ bg: currentPage === 2 ? '#B39230' : '#FFF8E7' }}
-          size="md"
-          minW="40px"
-        >
-          2
-        </Button>
-      )}
-
-      {/* 4. Botón Siguiente */}
-      <Button
-        rightIcon={<FiChevronRight />}
-        onClick={() => handlePageChange(currentPage + 1)}
-        isDisabled={currentPage === Math.min(totalPages, 2)}
-        variant="outline"
-        borderColor="#D4AF37"
-        color="#D4AF37"
-        _hover={{ bg: '#FFF8E7' }}
-        size="md"
-      >
-        Siguiente
-      </Button>
-
-    </HStack>
-  </Center>
-)}
-            
+          {/* 📄 BOTÓN "CARGAR MÁS" ACUMULATIVO (SOLO EN EL CATÁLOGO COMPLETO) */}
+          {!isHomePage && currentPage < totalPages && (
+            <Center pt={8}>
+              <Button
+                leftIcon={<FiPlus />}
+                onClick={handleLoadMore}
+                isLoading={loadingMore}
+                loadingText="Cargando más joyas..."
+                bg="#D4AF37"
+                color="white"
+                _hover={{ bg: '#B39230', transform: 'scale(1.02)' }}
+                size="lg"
+                px={8}
+                borderRadius="full"
+                boxShadow="md"
+              >
+                Cargar más
+              </Button>
+            </Center>
+          )}
         </VStack>
       )}
 
