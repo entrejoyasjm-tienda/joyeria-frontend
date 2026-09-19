@@ -2,6 +2,7 @@ import React, { useEffect, lazy, Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { Center, Spinner } from '@chakra-ui/react';
 import { CartProvider } from './context/CartContext';
+import ScrollToTop from './components/ScrollToTop';
 
 // 🌟 Importación estándar para componentes globales (permanecen en memoria)
 import Navbar from './components/Navbar'; 
@@ -52,6 +53,8 @@ function App() {
   return (
     <CartProvider>
       <Router>
+        {/* 🌟 Componente que controla el desplazamiento en cada cambio de ruta */}
+      <ScrollToTop />
         <TopBanner />
         <Navbar /> {/* Renderizado síncrono estándar */}
         

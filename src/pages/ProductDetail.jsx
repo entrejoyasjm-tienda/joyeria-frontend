@@ -31,22 +31,23 @@ function ProductDetail() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // 🌟 ESTADO NUEVO: Controla si el usuario actual es el administrador
+  // 🌟 CONTROL DE SESIÓN: Estado para verificar si el usuario es administrador
   const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
-    // Verificamos si existe la sesión del administrador activa
+    // Verificamos si existe un token de administración guardado en el navegador
     const token = localStorage.getItem('adminToken');
     if (token) {
       setIsAdmin(true);
     }
 
+    // Petición para obtener la información completa de la joya actual
     const fetchProductSingle = async () => {
       try {
         const response = await API.get(`/products/${id}`); 
         setProduct(response.data);
       } catch (err) {
-        console.error("Error al traer el detalle:", err);
+        console.error("Error al traer el detalle del producto:", err);
         setError("No se pudo obtener la información de esta joya.");
       } finally {
         setLoading(false);
@@ -56,18 +57,31 @@ function ProductDetail() {
     fetchProductSingle();
   }, [id]);
 
+  // 🚀 FUNCIÓN DE NAVEGACIÓN: Retroceder en el historial al punto exacto anterior
+  const handleGoBack = () => {
+    if (window.history.length > 1) {
+      // Retrocede un paso en el historial conservando posición y filtros
+      navigate(-1);
+    } else {
+      // Resguardo de seguridad si se accede por enlace directo
+      navigate('/');
+    }
+  };
+
+  // Función para eliminar la joya desde el panel de administrador
   const handleDelete = async () => {
     if (window.confirm("¿Seguro que deseas eliminar esta joya de forma permanente?")) {
       try {
         await API.delete(`/products/${id}`);
-        navigate('/'); // Volvemos al catálogo ya que el producto no existe
+        navigate('/'); // Redirige al inicio al eliminar la joya
       } catch (err) {
-        console.error("Error al eliminar:", err);
+        console.error("Error al eliminar el producto:", err);
         alert("No se pudo eliminar el producto.");
       }
     }
   };
 
+  // Estado de carga inicial
   if (loading) {
     return (
       <Center h="100vh">
@@ -76,6 +90,7 @@ function ProductDetail() {
     );
   }
 
+  // Estado si ocurre un error o si no existe el producto
   if (error || !product) {
     return (
       <Container maxW="container.md" mt={10}>
@@ -83,8 +98,8 @@ function ProductDetail() {
           <AlertIcon />
           {error || "Producto no encontrado."}
         </Alert>
-        <Button leftIcon={<IoMdArrowBack />} mt={4} onClick={() => navigate('/')}>
-          Volver al Catálogo
+        <Button leftIcon={<IoMdArrowBack />} mt={4} onClick={handleGoBack}>
+          Volver atrás
         </Button>
       </Container>
     );
@@ -92,19 +107,21 @@ function ProductDetail() {
 
   return (
     <Container maxW="container.lg" py={12}>
-      {/* Botón Volver */}
+      
+      {/* 🌟 Botón Volver Atrás (Mantiene scroll y filtros previos) */}
       <Button 
         leftIcon={<IoMdArrowBack />} 
         variant="ghost" 
         mb={8} 
         color="gray.600"
         _hover={{ color: '#D4AF37' }}
-        onClick={() => navigate('/')}
+        onClick={handleGoBack}
       >
-        Volver al catálogo
+        Volver atrás
       </Button>
 
       <SimpleGrid columns={{ base: 1, md: 2 }} spacing={10}>
+        
         {/* Imagen de la Joya */}
         <Box borderRadius="xl" overflow="hidden" boxShadow="md" border="1px solid" borderColor="gray.100">
           <Image 
@@ -116,7 +133,7 @@ function ProductDetail() {
           />
         </Box>
 
-        {/* Información Técnica */}
+        {/* Información Técnica y Precio */}
         <VStack align="start" spacing={5}>
           <Badge colorScheme="amber" variant="solid" borderRadius="full" px={3} py={1}>
             {product.category || 'Colección Exclusiva'}
@@ -150,23 +167,24 @@ function ProductDetail() {
             </Text>
           </HStack>
 
+          {/* Botón de Añadir al Carrito e Iniciar Compra */}
           <Button 
-  w="100%" 
-  size="lg"
-  bg="#D4AF37" 
-  color="white" 
-  _hover={{ bg: '#B39230' }}
-  shadow="md"
-  mt={6}
-  onClick={() => {
-    addToCart(product, 1);
-    navigate('/cart'); // Te redirigirá a la página de checkout del carrito
-  }}
->
-  Iniciar Compra / Consultar
-</Button>
+            w="100%" 
+            size="lg"
+            bg="#D4AF37" 
+            color="white" 
+            _hover={{ bg: '#B39230' }}
+            shadow="md"
+            mt={6}
+            onClick={() => {
+              addToCart(product, 1);
+              navigate('/cart');
+            }}
+          >
+            Iniciar Compra / Consultar
+          </Button>
 
-          {/* 🌟 BOTONERA DE ADMINISTRACIÓN PROTEGIDA CON RENDERIZADO CONDICIONAL */}
+          {/* 🌟 BOTONERA DE ADMINISTRACIÓN (Visibilidad restringida) */}
           {isAdmin && (
             <VStack w="100%" spacing={3} pt={4}>
               <Divider />
