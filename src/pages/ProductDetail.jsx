@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import { FiEdit2, FiTrash2 } from 'react-icons/fi';
 import { IoMdArrowBack } from 'react-icons/io';
@@ -7,7 +7,6 @@ import {
   Box, 
   Container, 
   SimpleGrid, 
-  Image, 
   Heading, 
   Text, 
   Button, 
@@ -22,11 +21,15 @@ import {
 } from '@chakra-ui/react';
 
 import API from '../services/api';
+// 🚀 Componente de Imagen Optimizada de la aplicación
+import OptimizedImage from '../components/OptimizedImage';
 
 function ProductDetail() {
   const { addToCart } = useCart();
   const { id } = useParams(); // Captura el ID de la joya desde la URL
   const navigate = useNavigate();
+  const location = useLocation(); // 🌟 Permite evaluar el historial interno de React Router
+
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -57,13 +60,13 @@ function ProductDetail() {
     fetchProductSingle();
   }, [id]);
 
-  // 🚀 FUNCIÓN DE NAVEGACIÓN: Retroceder en el historial al punto exacto anterior
+  // 🚀 FUNCIÓN DE NAVEGACIÓN INTELIGENTE HACIA ATRÁS:
+  // Si vino desde el catálogo (categoría o búsqueda), vuelve a ese estado conservando productos y scroll.
+  // Si ingresó por enlace directo, redirige a la portada de forma segura.
   const handleGoBack = () => {
-    if (window.history.length > 1) {
-      // Retrocede un paso en el historial conservando posición y filtros
+    if (location.key !== 'default') {
       navigate(-1);
     } else {
-      // Resguardo de seguridad si se accede por enlace directo
       navigate('/');
     }
   };
@@ -108,7 +111,7 @@ function ProductDetail() {
   return (
     <Container maxW="container.lg" py={12}>
       
-      {/* 🌟 Botón Volver Atrás (Mantiene scroll y filtros previos) */}
+      {/* 🌟 Botón Volver Atrás (Mantiene scroll y filtros previos o redirige al inicio) */}
       <Button 
         leftIcon={<IoMdArrowBack />} 
         variant="ghost" 
@@ -122,14 +125,14 @@ function ProductDetail() {
 
       <SimpleGrid columns={{ base: 1, md: 2 }} spacing={10}>
         
-        {/* Imagen de la Joya */}
+        {/* Imagen de la Joya usando OptimizedImage */}
         <Box borderRadius="xl" overflow="hidden" boxShadow="md" border="1px solid" borderColor="gray.100">
-          <Image 
+          <OptimizedImage 
             src={product.imageUrl || 'https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?q=80&w=500'} 
             alt={product.name}
             w="100%"
             h={{ base: '350px', md: '500px' }}
-            objectFit="cover"
+            priority={true}
           />
         </Box>
 

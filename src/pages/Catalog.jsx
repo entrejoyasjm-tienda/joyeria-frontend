@@ -45,10 +45,6 @@ function Catalog() {
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState(null);
 
-  // 📄 Estados para la gestión de la carga acumulativa
-  const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -58,27 +54,35 @@ function Catalog() {
   const busquedaActiva = queryParams.get('search');
   const verTodoActivo = categoriaActiva === 'all';
 
+  // 📄 Leemos la página actual desde la URL (por defecto 1)
+  const targetPage = parseInt(queryParams.get('page') || '1', 10);
+
+  const [currentPage, setCurrentPage] = useState(targetPage);
+  const [totalPages, setTotalPages] = useState(1);
+
   // 📌 Identificar si estamos en la página inicial sin filtros
   const isHomePage = !categoriaActiva && !busquedaActiva;
 
-  // Cargar primera página de productos al cambiar filtros en la URL
+  // Cargar productos respetando la página acumulada de la URL
   useEffect(() => {
     const search = queryParams.get('search') || '';
     const category = queryParams.get('category') || '';
+    const pageFromUrl = parseInt(queryParams.get('page') || '1', 10);
 
     const fetchInitialProducts = async () => {
       setLoading(true);
-      setCurrentPage(1); // Reiniciar a la página 1 al cambiar de categoría
+      setCurrentPage(pageFromUrl);
       try {
         const categoryParam = category === 'all' ? '' : category;
         const limitParam = isHomePage ? 4 : 12;
 
+        // 🌟 Si pageFromUrl > 1, multiplicamos el límite para solicitar las N páginas acumuladas de una vez
         const response = await API.get('/products', {
           params: {
             search: search,
             category: categoryParam,
             page: 1,
-            limit: limitParam
+            limit: limitParam * pageFromUrl
           }
         }); 
         
@@ -127,6 +131,11 @@ function Catalog() {
         // 🚀 Concatenación: Mantiene los productos anteriores y agrega los nuevos
         setProducts((prevProducts) => [...prevProducts, ...response.data.products]);
         setCurrentPage(nextPage);
+
+        // 🌟 Actualiza la URL para reflejar la página acumulada sin agregar una entrada adicional al historial
+        const newParams = new URLSearchParams(location.search);
+        newParams.set('page', nextPage.toString());
+        navigate(`/?${newParams.toString()}`, { replace: true });
       }
     } catch (err) {
       console.error("Error al cargar más productos:", err);
@@ -140,7 +149,7 @@ function Catalog() {
     if (!categoriaQuery) {
       navigate('/');
     } else {
-      navigate(`/?category=${encodeURIComponent(categoriaQuery)}`);
+      navigate(`/?category=${encodeURIComponent(categoriaQuery)}&page=1`);
     }
   };
 
