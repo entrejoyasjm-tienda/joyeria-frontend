@@ -1,7 +1,7 @@
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import { IconButton } from '@chakra-ui/react'; 
-import { FiSettings, FiPlus } from 'react-icons/fi'; 
+import { FiSettings, FiChevronLeft, FiPlus } from 'react-icons/fi'; 
 import { 
   Box, 
   Heading, 
@@ -14,13 +14,18 @@ import {
   Spinner, 
   Center,
   Alert,
-  AlertIcon
+  AlertIcon,
+  HStack
 } from '@chakra-ui/react';
 import API from '../services/api'; 
 
+// 📸 Logo transparente de la tienda
 import logoImg from '../assets/logo.png'; 
+
+// 🚀 Componente de Imagen Optimizada
 import OptimizedImage from '../components/OptimizedImage';
 
+// 🌟 Categorías con imágenes para las tarjetas
 const CATEGORIES = [
   { id: 'todos', name: 'Ver Todo', image: '/images/todas.jpg', query: 'all' },
   { id: 'anillos', name: 'Anillos', image: '/images/anillos.jpg', query: 'Anillos' },
@@ -43,34 +48,41 @@ function Catalog() {
   const location = useLocation();
   const navigate = useNavigate();
 
+  // Obtener parámetros de la URL
   const queryParams = new URLSearchParams(location.search);
   const categoriaActiva = queryParams.get('category');
   const busquedaActiva = queryParams.get('search');
   const verTodoActivo = categoriaActiva === 'all';
 
-  const [currentPage, setCurrentPage] = useState(1);
+  // 📄 Leemos la página actual desde la URL (por defecto 1)
+  const targetPage = parseInt(queryParams.get('page') || '1', 10);
+
+  const [currentPage, setCurrentPage] = useState(targetPage);
   const [totalPages, setTotalPages] = useState(1);
 
+  // 📌 Identificar si estamos en la página inicial sin filtros
   const isHomePage = !categoriaActiva && !busquedaActiva;
 
-  // 1. Carga Inicial: Solo se dispara cuando cambian los filtros (categoría o búsqueda)
+  // Cargar productos respetando la página acumulada de la URL
   useEffect(() => {
     const search = queryParams.get('search') || '';
     const category = queryParams.get('category') || '';
+    const pageFromUrl = parseInt(queryParams.get('page') || '1', 10);
 
     const fetchInitialProducts = async () => {
       setLoading(true);
-      setCurrentPage(1); // Reiniciamos a la página 1 cuando cambia el filtro
+      setCurrentPage(pageFromUrl);
       try {
         const categoryParam = category === 'all' ? '' : category;
         const limitParam = isHomePage ? 4 : 12;
 
+        // 🌟 Si pageFromUrl > 1, multiplicamos el límite para solicitar las N páginas acumuladas de una vez
         const response = await API.get('/products', {
           params: {
             search: search,
             category: categoryParam,
             page: 1,
-            limit: limitParam
+            limit: limitParam * pageFromUrl
           }
         }); 
         
@@ -86,16 +98,16 @@ function Catalog() {
         setError(null);
       } catch (err) {
         console.error("Error al traer productos:", err);
-        setError("No se pudo conectar con el servidor.");
+        setError("No se pudo conectar con el servidor. ¿Está encendido el Backend?");
       } finally {
         setLoading(false);
       }
     };
 
     fetchInitialProducts();
-  }, [categoriaActiva, busquedaActiva, isHomePage]);
+  }, [location.search, isHomePage]);
 
-  // 2. Cargar Más: Petición asíncrona limpia sin modificar la navegación del enrutador
+  // Función para cargar acumulativamente la siguiente página de productos
   const handleLoadMore = async () => {
     if (currentPage >= totalPages || loadingMore) return;
 
@@ -116,9 +128,14 @@ function Catalog() {
       });
 
       if (response.data && Array.isArray(response.data.products)) {
-        // Concatenamos los nuevos productos conservando la lista previa intacta
+        // 🚀 Concatenación: Mantiene los productos anteriores y agrega los nuevos
         setProducts((prevProducts) => [...prevProducts, ...response.data.products]);
         setCurrentPage(nextPage);
+
+        // 🌟 Actualiza la URL para reflejar la página acumulada sin agregar una entrada adicional al historial
+        const newParams = new URLSearchParams(location.search);
+        newParams.set('page', nextPage.toString());
+        navigate(`/?${newParams.toString()}`, { replace: true });
       }
     } catch (err) {
       console.error("Error al cargar más productos:", err);
@@ -127,11 +144,12 @@ function Catalog() {
     }
   };
 
+  // Selección de categoría
   const handleCategorySelect = (categoriaQuery) => {
     if (!categoriaQuery) {
       navigate('/');
     } else {
-      navigate(`/?category=${encodeURIComponent(categoriaQuery)}`);
+      navigate(`/?category=${encodeURIComponent(categoriaQuery)}&page=1`);
     }
   };
 
@@ -157,36 +175,42 @@ function Catalog() {
   return (
     <Container maxW="container.xl" py={8}>
       
-      {/* Encabezado */}
+      {/* 🌟 CABECERA CON LOGO Y TÍTULOS */}
       <Box textAlign="center" mb={8} bg="gray.50" py={8} borderRadius="xl" boxShadow="md">
         <VStack spacing={4} align="center">
           <OptimizedImage 
             src={logoImg} 
-            alt="Logo" 
+            alt="Entre Joyas J.M Logo" 
             h={{ base: '110px', md: '140px' }}
             w={{ base: '110px', md: '140px' }}
             borderRadius="full"
             priority={true}
           />
+
           <Box>
-            <Heading as="h1" size="xl" color="gray.800" mb={2}>
+            <Heading as="h1" size="xl" color="gray.800" mb={2} letterSpacing="wide">
               {verTodoActivo ? "CATÁLOGO COMPLETO" :
                categoriaActiva ? `COLECCIÓN DE ${categoriaActiva.toUpperCase()}` : 
                busquedaActiva ? `RESULTADOS PARA: "${busquedaActiva}"` : 
                "¡Últimas Novedades!"}
             </Heading>
-            <Text color="gray.600" fontStyle="italic">
-              Explora nuestras piezas exclusivas.
+            <Text color="gray.600" fontStyle="italic" fontSize={{ base: 'md', md: 'lg' }}>
+              {busquedaActiva 
+                ? "Revisa las piezas que coinciden con tu criterio." 
+                : (categoriaActiva || verTodoActivo)
+                ? "Explora todos los modelos disponibles en nuestra tienda." 
+                : "Descubre las últimas 4 piezas agregadas a nuestra colección."}
             </Text>
           </Box>
         </VStack>
       </Box>
 
-      {/* Selector de Categorías */}
+      {/* 💎 SECCIÓN DE TARJETAS DE CATEGORÍAS */}
       <Box mb={10}>
         <Heading size="md" mb={4} color="gray.700" textAlign="center">
           Explora por Categoría
         </Heading>
+
         <SimpleGrid columns={{ base: 2, sm: 3, md: 5 }} spacing={4}>
           {CATEGORIES.map((cat) => {
             const isSelected = 
@@ -205,6 +229,12 @@ function Catalog() {
                 border="2px solid"
                 borderColor={isSelected ? '#D4AF37' : 'gray.200'}
                 boxShadow={isSelected ? 'md' : 'sm'}
+                transition="all 0.2s ease-in-out"
+                _hover={{
+                  transform: 'translateY(-4px)',
+                  boxShadow: 'md',
+                  borderColor: '#D4AF37'
+                }}
                 textAlign="center"
               >
                 <OptimizedImage 
@@ -212,9 +242,14 @@ function Catalog() {
                   alt={cat.name}
                   h="100px"
                   w="100%"
+                  fallbackSrc="https://via.placeholder.com/150?text=Joya"
                 />
                 <Box p={2}>
-                  <Text fontSize="sm" fontWeight={isSelected ? 'bold' : 'medium'} color={isSelected ? '#D4AF37' : 'gray.700'}>
+                  <Text 
+                    fontSize="sm" 
+                    fontWeight={isSelected ? 'bold' : 'medium'}
+                    color={isSelected ? '#D4AF37' : 'gray.700'}
+                  >
                     {cat.name}
                   </Text>
                 </Box>
@@ -224,11 +259,11 @@ function Catalog() {
         </SimpleGrid>
       </Box>
 
-      {/* Grilla de Productos */}
+      {/* 📦 GRILLA DE PRODUCTOS */}
       {products.length === 0 ? (
         <VStack spacing={4} py={10}>
           <Text textAlign="center" color="gray.500" fontSize="lg">
-            No se encontraron joyas disponibles.
+            No se encontraron joyas disponibles para tu criterio de búsqueda.
           </Text>
           <Button onClick={() => handleCategorySelect('all')} colorScheme="teal" variant="outline" size="sm">
             Ver Todo el Catálogo
@@ -239,32 +274,41 @@ function Catalog() {
           <SimpleGrid columns={{ base: 1, sm: 2, md: 3, lg: 4 }} spacing={8}>
             {products.map((product, index) => (
               <Box 
-                key={product._id || product.id || index}
+                key={product._id} 
                 bg="white" 
                 borderRadius="xl" 
                 overflow="hidden" 
                 boxShadow="sm"
                 border="1px solid"
                 borderColor="gray.100"
+                transition="all 0.3s"
+                _hover={{ transform: 'translateY(-5px)', boxShadow: 'md' }}
               >
                 <OptimizedImage 
-                  src={product.imageUrl || 'https://via.placeholder.com/400'} 
+                  src={product.imageUrl || 'https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?q=80&w=500'} 
                   alt={product.name}
                   h="250px"
                   w="100%"
+                  width={400}
+                  height={400}
+                  priority={index === 0}
                 />
+
                 <VStack p={5} spacing={3} align="start">
                   <Badge colorScheme="amber" variant="outline" borderRadius="full" px={2}>
                     {product.category || 'Joya'}
                   </Badge>
+                  
                   <Heading size="md" color="gray.800" isTruncated maxW="100%">
                     {product.name}
                   </Heading>
+
                   <Text fontSize="lg" fontWeight="bold" color="#D4AF37">
                     ${product.price?.toLocaleString()}
                   </Text>
+
                   <Button 
-                    onClick={() => navigate(`/product/${product._id || product.id}`)} 
+                    onClick={() => navigate(`/product/${product._id}`)} 
                     w="100%" 
                     bg="#D4AF37" 
                     color="white" 
@@ -278,7 +322,25 @@ function Catalog() {
             ))}
           </SimpleGrid>
 
-          {/* Botón Cargar Más */}
+          {/* 🔗 BOTÓN DE VER TODO EN LA PÁGINA INICIAL */}
+          {isHomePage && (
+            <Center pt={4}>
+              <Button
+                onClick={() => handleCategorySelect('all')}
+                bg="#D4AF37"
+                color="white"
+                size="lg"
+                px={8}
+                _hover={{ bg: '#B39230', transform: 'scale(1.03)' }}
+                transition="all 0.2s"
+                boxShadow="md"
+              >
+                Ver Todo el Catálogo
+              </Button>
+            </Center>
+          )}
+
+          {/* 📄 BOTÓN "CARGAR MÁS" ACUMULATIVO (SOLO EN EL CATÁLOGO COMPLETO) */}
           {!isHomePage && currentPage < totalPages && (
             <Center pt={8}>
               <Button
@@ -288,7 +350,7 @@ function Catalog() {
                 loadingText="Cargando más joyas..."
                 bg="#D4AF37"
                 color="white"
-                _hover={{ bg: '#B39230' }}
+                _hover={{ bg: '#B39230', transform: 'scale(1.02)' }}
                 size="lg"
                 px={8}
                 borderRadius="full"
@@ -301,7 +363,7 @@ function Catalog() {
         </VStack>
       )}
 
-      {/* Botón Flotante de Administración */}
+      {/* 🛠️ BOTÓN FLOTANTE DE ADMINISTRACIÓN */}
       <IconButton
         onClick={() => navigate(localStorage.getItem('adminToken') ? "/admin" : "/login")}
         icon={<FiSettings />}
@@ -314,6 +376,8 @@ function Catalog() {
         color="white"
         borderRadius="full"
         boxShadow="dark-lg"
+        _hover={{ bg: '#B39230', transform: 'scale(1.1)' }}
+        transition="all 0.2s"
         zIndex="1000"
       />
     </Container>
