@@ -18,11 +18,9 @@ import {
 } from '@chakra-ui/react';
 import API from '../services/api'; 
 
-// Importación de componentes e imágenes locales
 import logoImg from '../assets/logo.png'; 
 import OptimizedImage from '../components/OptimizedImage';
 
-// Definición de las categorías disponibles en la tienda
 const CATEGORIES = [
   { id: 'todos', name: 'Ver Todo', image: '/images/todas.jpg', query: 'all' },
   { id: 'anillos', name: 'Anillos', image: '/images/anillos.jpg', query: 'Anillos' },
@@ -37,49 +35,42 @@ const CATEGORIES = [
 ];
 
 function Catalog() {
-  // Estado para la lista total acumulada de productos
   const [products, setProducts] = useState([]);
-  // Carga inicial (afecta a toda la pantalla)
   const [loading, setLoading] = useState(true);
-  // Carga secundaria (afecta únicamente al botón "Cargar más")
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState(null);
 
   const location = useLocation();
   const navigate = useNavigate();
 
-  // Obtención de variables de consulta desde la URL
   const queryParams = new URLSearchParams(location.search);
   const categoriaActiva = queryParams.get('category');
   const busquedaActiva = queryParams.get('search');
   const verTodoActivo = categoriaActiva === 'all';
 
-  const targetPage = parseInt(queryParams.get('page') || '1', 10);
-  const [currentPage, setCurrentPage] = useState(targetPage);
+  const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
 
   const isHomePage = !categoriaActiva && !busquedaActiva;
 
-  // Carga inicial o recarga por cambio de categoría / búsqueda
+  // 1. Carga Inicial: Solo se dispara cuando cambian los filtros (categoría o búsqueda)
   useEffect(() => {
     const search = queryParams.get('search') || '';
     const category = queryParams.get('category') || '';
-    const pageFromUrl = parseInt(queryParams.get('page') || '1', 10);
 
     const fetchInitialProducts = async () => {
       setLoading(true);
-      setCurrentPage(pageFromUrl);
+      setCurrentPage(1); // Reiniciamos a la página 1 cuando cambia el filtro
       try {
         const categoryParam = category === 'all' ? '' : category;
         const limitParam = isHomePage ? 4 : 12;
 
-        // Petición inicial a la API
         const response = await API.get('/products', {
           params: {
             search: search,
             category: categoryParam,
             page: 1,
-            limit: limitParam * pageFromUrl
+            limit: limitParam
           }
         }); 
         
@@ -102,11 +93,10 @@ function Catalog() {
     };
 
     fetchInitialProducts();
-  }, [location.search, isHomePage]);
+  }, [categoriaActiva, busquedaActiva, isHomePage]);
 
-  // Función ejecutada al hacer clic en "Cargar más"
+  // 2. Cargar Más: Petición asíncrona limpia sin modificar la navegación del enrutador
   const handleLoadMore = async () => {
-    // Si ya estamos en la última página o ya se está realizando una carga, no ejecutamos nada
     if (currentPage >= totalPages || loadingMore) return;
 
     setLoadingMore(true);
@@ -126,18 +116,9 @@ function Catalog() {
       });
 
       if (response.data && Array.isArray(response.data.products)) {
-        // Anexar los nuevos productos traídos al final del arreglo existente
+        // Concatenamos los nuevos productos conservando la lista previa intacta
         setProducts((prevProducts) => [...prevProducts, ...response.data.products]);
         setCurrentPage(nextPage);
-
-        // Actualizar la URL de forma limpia sin reajustar el scroll
-        const newParams = new URLSearchParams(location.search);
-        newParams.set('page', nextPage.toString());
-        
-        navigate(`/?${newParams.toString()}`, { 
-          replace: true, 
-          preventScrollReset: true 
-        });
       }
     } catch (err) {
       console.error("Error al cargar más productos:", err);
@@ -146,16 +127,14 @@ function Catalog() {
     }
   };
 
-  // Navegación rápida por categorías
   const handleCategorySelect = (categoriaQuery) => {
     if (!categoriaQuery) {
       navigate('/');
     } else {
-      navigate(`/?category=${encodeURIComponent(categoriaQuery)}&page=1`);
+      navigate(`/?category=${encodeURIComponent(categoriaQuery)}`);
     }
   };
 
-  // Renderizado en caso de carga inicial
   if (loading) {
     return (
       <Center h="100vh">
@@ -164,7 +143,6 @@ function Catalog() {
     );
   }
 
-  // Renderizado en caso de error de conexión
   if (error) {
     return (
       <Container maxW="container.md" mt={10}>
@@ -179,7 +157,7 @@ function Catalog() {
   return (
     <Container maxW="container.xl" py={8}>
       
-      {/* Banner / Encabezado */}
+      {/* Encabezado */}
       <Box textAlign="center" mb={8} bg="gray.50" py={8} borderRadius="xl" boxShadow="md">
         <VStack spacing={4} align="center">
           <OptimizedImage 
@@ -204,7 +182,7 @@ function Catalog() {
         </VStack>
       </Box>
 
-      {/* Grid de Selección de Categorías */}
+      {/* Selector de Categorías */}
       <Box mb={10}>
         <Heading size="md" mb={4} color="gray.700" textAlign="center">
           Explora por Categoría
@@ -246,7 +224,7 @@ function Catalog() {
         </SimpleGrid>
       </Box>
 
-      {/* Lista / Grid de Productos */}
+      {/* Grilla de Productos */}
       {products.length === 0 ? (
         <VStack spacing={4} py={10}>
           <Text textAlign="center" color="gray.500" fontSize="lg">
@@ -300,7 +278,7 @@ function Catalog() {
             ))}
           </SimpleGrid>
 
-          {/* Botón de Carga Progresiva */}
+          {/* Botón Cargar Más */}
           {!isHomePage && currentPage < totalPages && (
             <Center pt={8}>
               <Button
@@ -323,7 +301,7 @@ function Catalog() {
         </VStack>
       )}
 
-      {/* Acceso Rápido al Panel de Admin */}
+      {/* Botón Flotante de Administración */}
       <IconButton
         onClick={() => navigate(localStorage.getItem('adminToken') ? "/admin" : "/login")}
         icon={<FiSettings />}
