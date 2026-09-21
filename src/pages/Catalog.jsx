@@ -25,8 +25,46 @@ import logoImg from '../assets/logo.png';
 // 🚀 Componente de Imagen Optimizada
 import OptimizedImage from '../components/OptimizedImage';
 
-//Banner de fondo de categorías
-import bannerImg from '../images/Banner.jpg';
+<Box
+  textAlign="center"
+  mb={8}
+  py={8}
+  borderRadius="xl"
+  boxShadow="md"
+  bgImage="url('/images/Banner.jpg')"
+  bgSize="cover"
+  bgPosition="center"
+  bgRepeat="no-repeat"
+  position="relative"
+  overflow="hidden"
+>
+  <Box
+    position="absolute"
+    inset={0}
+    bg="blackAlpha.500"
+  />
+
+  <VStack
+    spacing={4}
+    align="center"
+    position="relative"
+    zIndex={1}
+  >
+    <OptimizedImage 
+      src={logoImg} 
+      alt="Entre Joyas J.M Logo" 
+      h={{ base: '110px', md: '140px' }}
+      w={{ base: '110px', md: '140px' }}
+      borderRadius="full"
+      priority={true}
+    />
+
+    <Box color="white">
+      {/* ...existing code... */}
+    </Box>
+  </VStack>
+</Box>
+
 
 // 🌟 Categorías con imágenes para las tarjetas
 const CATEGORIES = [
