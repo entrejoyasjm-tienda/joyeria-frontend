@@ -186,13 +186,7 @@ function Catalog() {
         position="relative"
         overflow="hidden"
       >
-        {/* Capa de oscurecimiento para asegurar la legibilidad del texto blanco */}
-        <Box 
-          position="absolute" 
-          inset={0} 
-          bg="blackAlpha.600" 
-          zIndex={0} 
-        />
+       
 
         {/* Contenido del Banner (Logo + Títulos) */}
         <VStack spacing={4} align="center" position="relative" zIndex={1}>
@@ -211,7 +205,7 @@ function Catalog() {
               size="xl"
               mb={2}
               letterSpacing="wide"
-              textShadow="0 2px 4px rgba(0,0,0,0.8)"
+              textShadow="0 2px 4px rgba(0,0,0,0.9)"
             >
               {verTodoActivo ? "CATÁLOGO COMPLETO" :
                categoriaActiva ? `COLECCIÓN DE ${categoriaActiva.toUpperCase()}` :
@@ -222,7 +216,7 @@ function Catalog() {
             <Text
               fontStyle="italic"
               fontSize={{ base: 'md', md: 'lg' }}
-              textShadow="0 1px 3px rgba(0,0,0,0.8)"
+              textShadow="0 1px 3px rgba(0,0,0,0.9)"
             >
               {busquedaActiva
                 ? "Revisa las piezas que coinciden con tu criterio."
