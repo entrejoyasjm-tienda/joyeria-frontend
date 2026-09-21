@@ -14,8 +14,7 @@ import {
   Spinner, 
   Center,
   Alert,
-  AlertIcon,
-  HStack
+  AlertIcon
 } from '@chakra-ui/react';
 import API from '../services/api'; 
 
@@ -24,47 +23,6 @@ import logoImg from '../assets/logo.png';
 
 // 🚀 Componente de Imagen Optimizada
 import OptimizedImage from '../components/OptimizedImage';
-
-<Box
-  textAlign="center"
-  mb={8}
-  py={8}
-  borderRadius="xl"
-  boxShadow="md"
-  bgImage="url('/images/Banner.jpg')"
-  bgSize="cover"
-  bgPosition="center"
-  bgRepeat="no-repeat"
-  position="relative"
-  overflow="hidden"
->
-  <Box
-    position="absolute"
-    inset={0}
-    bg="blackAlpha.500"
-  />
-
-  <VStack
-    spacing={4}
-    align="center"
-    position="relative"
-    zIndex={1}
-  >
-    <OptimizedImage 
-      src={logoImg} 
-      alt="Entre Joyas J.M Logo" 
-      h={{ base: '110px', md: '140px' }}
-      w={{ base: '110px', md: '140px' }}
-      borderRadius="full"
-      priority={true}
-    />
-
-    <Box color="white">
-      {/* ...existing code... */}
-    </Box>
-  </VStack>
-</Box>
-
 
 // 🌟 Categorías con imágenes para las tarjetas
 const CATEGORIES = [
@@ -117,7 +75,6 @@ function Catalog() {
         const categoryParam = category === 'all' ? '' : category;
         const limitParam = isHomePage ? 4 : 12;
 
-        // 🌟 Si pageFromUrl > 1, multiplicamos el límite para solicitar las N páginas acumuladas de una vez
         const response = await API.get('/products', {
           params: {
             search: search,
@@ -169,11 +126,9 @@ function Catalog() {
       });
 
       if (response.data && Array.isArray(response.data.products)) {
-        // 🚀 Concatenación: Mantiene los productos anteriores y agrega los nuevos
         setProducts((prevProducts) => [...prevProducts, ...response.data.products]);
         setCurrentPage(nextPage);
 
-        // 🌟 Actualiza la URL para reflejar la página acumulada sin agregar una entrada adicional al historial
         const newParams = new URLSearchParams(location.search);
         newParams.set('page', nextPage.toString());
         navigate(`/?${newParams.toString()}`, { replace: true });
@@ -216,9 +171,31 @@ function Catalog() {
   return (
     <Container maxW="container.xl" py={8}>
       
-      {/* 🌟 CABECERA CON LOGO Y TÍTULOS */}
-      <Box textAlign="center" mb={8} bg="gray.50" py={8} borderRadius="xl" boxShadow="md">
-        <VStack spacing={4} align="center">
+      {/* 🌟 CABECERA CON BANNER DE FONDO, LOGO Y TÍTULOS */}
+      <Box
+        textAlign="center"
+        mb={8}
+        py={{ base: 8, md: 12 }}
+        px={4}
+        borderRadius="xl"
+        boxShadow="md"
+        bgImage="url('/images/Banner.jpg')" // 👈 Ruta a tu imagen dentro de public/images/
+        bgSize="cover"
+        bgPosition="center"
+        bgRepeat="no-repeat"
+        position="relative"
+        overflow="hidden"
+      >
+        {/* Capa de oscurecimiento para asegurar la legibilidad del texto blanco */}
+        <Box 
+          position="absolute" 
+          inset={0} 
+          bg="blackAlpha.600" 
+          zIndex={0} 
+        />
+
+        {/* Contenido del Banner (Logo + Títulos) */}
+        <VStack spacing={4} align="center" position="relative" zIndex={1}>
           <OptimizedImage 
             src={logoImg} 
             alt="Entre Joyas J.M Logo" 
@@ -228,18 +205,29 @@ function Catalog() {
             priority={true}
           />
 
-          <Box>
-            <Heading as="h1" size="xl" color="gray.800" mb={2} letterSpacing="wide">
+          <Box color="white">
+            <Heading
+              as="h1"
+              size="xl"
+              mb={2}
+              letterSpacing="wide"
+              textShadow="0 2px 4px rgba(0,0,0,0.8)"
+            >
               {verTodoActivo ? "CATÁLOGO COMPLETO" :
-               categoriaActiva ? `COLECCIÓN DE ${categoriaActiva.toUpperCase()}` : 
-               busquedaActiva ? `RESULTADOS PARA: "${busquedaActiva}"` : 
+               categoriaActiva ? `COLECCIÓN DE ${categoriaActiva.toUpperCase()}` :
+               busquedaActiva ? `RESULTADOS PARA: "${busquedaActiva}"` :
                "ENTRE JOYAS J.M"}
             </Heading>
-            <Text color="gray.600" fontStyle="italic" fontSize={{ base: 'md', md: 'lg' }}>
-              {busquedaActiva 
-                ? "Revisa las piezas que coinciden con tu criterio." 
+
+            <Text
+              fontStyle="italic"
+              fontSize={{ base: 'md', md: 'lg' }}
+              textShadow="0 1px 3px rgba(0,0,0,0.8)"
+            >
+              {busquedaActiva
+                ? "Revisa las piezas que coinciden con tu criterio."
                 : (categoriaActiva || verTodoActivo)
-                ? "Explora todos los modelos disponibles en nuestra tienda." 
+                ? "Explora todos los modelos disponibles en nuestra tienda."
                 : "Descubre los últimos ingresos de nuestra colección."}
             </Text>
           </Box>
@@ -381,7 +369,7 @@ function Catalog() {
             </Center>
           )}
 
-          {/* 📄 BOTÓN "CARGAR MÁS" ACUMULATIVO (SOLO EN EL CATÁLOGO COMPLETO) */}
+          {/* 📄 BOTÓN "CARGAR MÁS" ACUMULATIVO */}
           {!isHomePage && currentPage < totalPages && (
             <Center pt={8}>
               <Button
