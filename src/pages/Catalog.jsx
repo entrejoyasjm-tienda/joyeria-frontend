@@ -25,6 +25,9 @@ import logoImg from '../assets/logo.png';
 // 🚀 Componente de Imagen Optimizada
 import OptimizedImage from '../components/OptimizedImage';
 
+//Banner de fondo de categorías
+import bannerImg from '../images/Banner.jpg';
+
 // 🌟 Categorías con imágenes para las tarjetas
 const CATEGORIES = [
   { id: 'todos', name: 'Ver Todo', image: '/images/todas.jpg', query: 'all' },
@@ -192,14 +195,14 @@ function Catalog() {
               {verTodoActivo ? "CATÁLOGO COMPLETO" :
                categoriaActiva ? `COLECCIÓN DE ${categoriaActiva.toUpperCase()}` : 
                busquedaActiva ? `RESULTADOS PARA: "${busquedaActiva}"` : 
-               "¡Últimas Novedades!"}
+               "ENTRE JOYAS J.M"}
             </Heading>
             <Text color="gray.600" fontStyle="italic" fontSize={{ base: 'md', md: 'lg' }}>
               {busquedaActiva 
                 ? "Revisa las piezas que coinciden con tu criterio." 
                 : (categoriaActiva || verTodoActivo)
                 ? "Explora todos los modelos disponibles en nuestra tienda." 
-                : "Descubre las últimas 4 piezas agregadas a nuestra colección."}
+                : "Descubre los últimos ingresos de nuestra colección."}
             </Text>
           </Box>
         </VStack>
