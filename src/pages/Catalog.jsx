@@ -1,5 +1,5 @@
 import { useLocation, useNavigate } from 'react-router-dom';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { IconButton } from '@chakra-ui/react'; 
 import { FiSettings, FiChevronLeft, FiPlus } from 'react-icons/fi'; 
 import { 
@@ -38,6 +38,9 @@ const CATEGORIES = [
   { id: 'otros', name: 'Otros', image: '/images/otros.jpg', query: 'Otros' },
 ];
 
+const PAGE_SIZE = 12;   // 👈 nuevas constantes
+const HOME_LIMIT = 4;
+
 function Catalog() {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -54,9 +57,13 @@ function Catalog() {
   const verTodoActivo = categoriaActiva === 'all';
 
   // 📄 Leemos la página actual desde la URL (por defecto 1)
-  const targetPage = parseInt(queryParams.get('page') || '1', 10);
+const targetPage = Math.max(parseInt(queryParams.get('page') || '1', 10) || 1, 1);
+// Guarda la página de la URL para usarla solo en la carga inicial
+// sin que "Cargar más" (que actualiza la URL) dispare una recarga
+const pageFromUrlRef = useRef(targetPage);
+pageFromUrlRef.current = targetPage;
 
-  const [currentPage, setCurrentPage] = useState(targetPage);
+const [currentPage, setCurrentPage] = useState(targetPage);
   const [totalPages, setTotalPages] = useState(1);
 
   // 📌 Identificar si estamos en la página inicial sin filtros
@@ -64,82 +71,84 @@ function Catalog() {
 
   // Cargar productos respetando la página acumulada de la URL
   useEffect(() => {
-    const search = queryParams.get('search') || '';
-    const category = queryParams.get('category') || '';
-    const pageFromUrl = parseInt(queryParams.get('page') || '1', 10);
+  let ignore = false;
+  const pageFromUrl = pageFromUrlRef.current;
+  const categoryParam = categoriaActiva === 'all' ? '' : (categoriaActiva || '');
 
-    const fetchInitialProducts = async () => {
-      setLoading(true);
-      setCurrentPage(pageFromUrl);
-      try {
-        const categoryParam = category === 'all' ? '' : category;
-        const limitParam = isHomePage ? 4 : 12;
-
-        const response = await API.get('/products', {
-          params: {
-            search: search,
-            category: categoryParam,
-            page: 1,
-            limit: limitParam * pageFromUrl
-          }
-        }); 
-        
-        if (response.data && Array.isArray(response.data.products)) {
-          setProducts(response.data.products);
-          setTotalPages(response.data.totalPages || 1);
-        } else if (Array.isArray(response.data)) {
-          const data = response.data;
-          setProducts(isHomePage ? data.slice(0, 4) : data);
-          setTotalPages(1);
-        }
-
-        setError(null);
-      } catch (err) {
-        console.error("Error al traer productos:", err);
-        setError("No se pudo conectar con el servidor. ¿Está encendido el Backend?");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchInitialProducts();
-  }, [location.search, isHomePage]);
-
-  // Función para cargar acumulativamente la siguiente página de productos
-  const handleLoadMore = async () => {
-    if (currentPage >= totalPages || loadingMore) return;
-
-    setLoadingMore(true);
-    const nextPage = currentPage + 1;
-    const search = queryParams.get('search') || '';
-    const category = queryParams.get('category') || '';
-    const categoryParam = category === 'all' ? '' : category;
-
+  const fetchInitialProducts = async () => {
+    setLoading(true);
+    setCurrentPage(pageFromUrl);
     try {
       const response = await API.get('/products', {
         params: {
-          search: search,
+          search: busquedaActiva || '',
           category: categoryParam,
-          page: nextPage,
-          limit: 12
+          page: 1,
+          limit: isHomePage ? HOME_LIMIT : PAGE_SIZE * pageFromUrl
         }
       });
+      if (ignore) return;
 
-      if (response.data && Array.isArray(response.data.products)) {
-        setProducts((prevProducts) => [...prevProducts, ...response.data.products]);
-        setCurrentPage(nextPage);
-
-        const newParams = new URLSearchParams(location.search);
-        newParams.set('page', nextPage.toString());
-        navigate(`/?${newParams.toString()}`, { replace: true });
+      const data = response.data;
+      if (data && Array.isArray(data.products)) {
+        setProducts(data.products);
+        setTotalPages(Math.max(Math.ceil((data.totalProducts || 0) / PAGE_SIZE), 1));
+      } else if (Array.isArray(data)) {
+        setProducts(isHomePage ? data.slice(0, HOME_LIMIT) : data);
+        setTotalPages(1);
       }
+      setError(null);
     } catch (err) {
-      console.error("Error al cargar más productos:", err);
+      if (ignore) return;
+      console.error("Error al traer productos:", err);
+      setError("No se pudo conectar con el servidor. Por favor, verifica tu conexión.");
     } finally {
-      setLoadingMore(false);
+      if (!ignore) setLoading(false);
     }
   };
 
+  fetchInitialProducts();
+  return () => { ignore = true; };
+}, [categoriaActiva, busquedaActiva, isHomePage]);
+
+  // Función para cargar acumulativamente la siguiente página de productos
+  const handleLoadMore = async () => {
+  if (currentPage >= totalPages || loadingMore) return;
+
+  setLoadingMore(true);
+  const nextPage = currentPage + 1;
+  const categoryParam = categoriaActiva === 'all' ? '' : (categoriaActiva || '');
+
+  try {
+    const response = await API.get('/products', {
+      params: {
+        search: busquedaActiva || '',
+        category: categoryParam,
+        page: nextPage,
+        limit: PAGE_SIZE
+      }
+    });
+
+    if (response.data && Array.isArray(response.data.products)) {
+      // Evita duplicados por si algún producto ya estaba en la lista
+      setProducts((prev) => {
+        const ids = new Set(prev.map((p) => p._id));
+        return [...prev, ...response.data.products.filter((p) => !ids.has(p._id))];
+      });
+      setCurrentPage(nextPage);
+      setTotalPages(Math.max(Math.ceil((response.data.totalProducts || 0) / PAGE_SIZE), 1));
+
+      // Actualiza la URL sin recargar (el efecto ya no depende de ella)
+      const newParams = new URLSearchParams(location.search);
+      newParams.set('page', String(nextPage));
+      navigate(`/?${newParams.toString()}`, { replace: true });
+    }
+  } catch (err) {
+    console.error("Error al cargar más productos:", err);
+  } finally {
+    setLoadingMore(false);
+  }
+};
   // Selección de categoría
   const handleCategorySelect = (categoriaQuery) => {
     if (!categoriaQuery) {
